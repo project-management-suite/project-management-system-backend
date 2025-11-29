@@ -165,4 +165,50 @@ router.delete('/:projectId', authorizeRoles('manager', 'admin'), deleteProject);
  */
 router.post('/:projectId/assign', authorizeRoles('manager', 'admin'), assignMembers);
 
+/**
+ * @openapi
+ * /api/projects/developers:
+ *   get:
+ *     tags: [Projects]
+ *     summary: Get all developers (for managers to assign tasks)
+ *     responses:
+ *       200:
+ *         description: List of developers
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       user_id:
+ *                         type: string
+ *                       username:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       role:
+ *                         type: string
+ */
+router.get('/developers', authorizeRoles('manager', 'admin'), async (req, res) => {
+  try {
+    const { supabase } = require('../config/supabase');
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('user_id, username, email, role')
+      .eq('role', 'DEVELOPER')
+      .order('username', { ascending: true });
+
+    if (error) throw error;
+
+    res.json({ users: data || [] });
+  } catch (error) {
+    console.error('Get developers error:', error);
+    res.status(500).json({ message: 'Failed to fetch developers', error: error.message });
+  }
+});
+
 module.exports = router;
