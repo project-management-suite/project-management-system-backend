@@ -15,6 +15,7 @@ const adminRoutes = require('./routes/admin.routes');
 const { errorHandler } = require('./middlewares/error.middleware');
 const { startScheduledJobs } = require('./utils/scheduler');
 const { homepageHTML } = require('./views/homepage');
+const { apiDocsHTML } = require('./views/apiDocs');
 
 const app = express();
 app.use(helmet());
@@ -29,16 +30,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Ensure swagger runs before any auth middleware (place here)
-app.use('/api-docs',
-  (req, res, next) => {
-    // Optional: skip auth if a global auth middleware exists later
-    req.skipAuth = true;
-    next();
-  },
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec)
-);
+// API Documentation - Custom implementation for Vercel compatibility
+app.get('/api-docs', (req, res) => {
+  res.send(apiDocsHTML);
+});
+
+// Serve swagger JSON separately  
+app.get('/api-docs/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
 
 // REMOVE debug type logs now that routes fixed
 // app.use('/api/auth', authRoutes);
