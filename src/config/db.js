@@ -1,17 +1,22 @@
 // src/config/db.js
-const mongoose = require('mongoose');
+const { supabase } = require('./supabase');
 
 async function connectDB() {
-  const uri = process.env.MONGO_URI;
-  if (!uri) throw new Error('MONGO_URI not set');
   try {
-    await mongoose.connect(uri, {
-      dbName: process.env.MONGO_DB_NAME || undefined
-      // Add other modern options here if needed (e.g. maxPoolSize)
-    });
-    console.log('MongoDB connected');
+    // Test Supabase connection
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('count')
+      .limit(1);
+
+    if (error) {
+      console.error('Supabase connection error:', error);
+      throw error;
+    }
+
+    console.log('Supabase connected successfully');
   } catch (err) {
-    console.error('MongoDB connection error', err);
+    console.error('Database connection error:', err);
     throw err;
   }
 }

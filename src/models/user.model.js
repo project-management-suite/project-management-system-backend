@@ -1,27 +1,94 @@
 // src/models/user.model.js
-const mongoose = require('mongoose');
+const { supabase } = require('../config/supabase');
 const bcrypt = require('bcryptjs');
 
-const roles = ['developer','manager','admin'];
+const roles = ['DEVELOPER', 'MANAGER', 'ADMIN'];
 
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true, lowercase: true },
-  password: { type: String, required: true },
-  role: { type: String, enum: roles, default: 'developer' },
-  avatar: String,
-  createdAt: { type: Date, default: Date.now }
-});
+class User {
+  constructor(data) {
+    this.user_id = data.user_id;
+    this.username = data.username;
+    this.email = data.email;
+    this.role = data.role;
+    this.created_at = data.created_at;
+    this.updated_at = data.updated_at;
+  }
 
-userSchema.pre('save', async function(next){
-  if (!this.isModified('password')) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
+  static async create({ username, email, password, role = 'DEVELOPER' }) {
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-userSchema.methods.comparePassword = function(candidate){
-  return bcrypt.compare(candidate, this.password);
-};
+    // Create user in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        username,
+        role
+      }
+    });
 
-module.exports = mongoose.model('User', userSchema);
+    if (authError) throw authError;
+
+    // Profile should be created automatically via trigger
+    // But let's fetch it to return
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', authData.user.id)
+      .single();
+
+    if (profileError) throw profileError;
+
+    return new User(profile);
+  }
+
+  static async findByEmail(email) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // No rows found
+      throw error;
+    }
+
+    return new User(data);
+  }
+
+  static async findById(id) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // No rows found
+      throw error;
+    }
+
+    return new User(data);
+  }
+
+  async comparePassword(candidatePassword) {
+    // For Supabase auth, we'll verify through the auth API
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: this.email,
+      password: candidatePassword
+    });
+
+    if (error) return false;
+
+    // Sign out immediately as this is just for verification
+    await supabase.auth.signOut();
+
+    return true;
+  }
+}
+
+module.exports = User;

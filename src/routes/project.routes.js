@@ -3,7 +3,15 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middlewares/auth.middleware');
 const { authorizeRoles } = require('../middlewares/role.middleware');
-const { createProject, getDashboard, assignMembers } = require('../controllers/project.controller');
+const {
+  createProject,
+  getProjects,
+  getProject,
+  updateProject,
+  deleteProject,
+  getDashboard,
+  assignMembers
+} = require('../controllers/project.controller');
 
 router.use(authenticate);
 
@@ -25,9 +33,7 @@ router.use(authenticate);
  *                   type: array
  *                   items: { $ref: '#/components/schemas/Project' }
  */
-router.get('/', (req, res) => {
-  res.json({ projects: [] });
-});
+router.get('/', getProjects);
 
 /**
  * @openapi
@@ -63,7 +69,77 @@ router.get('/dashboard', getDashboard);
  *             schema: { $ref: '#/components/schemas/Project' }
  *       403: { description: Forbidden }
  */
-router.post('/', authorizeRoles('manager','admin'), createProject);
+router.post('/', authorizeRoles('manager', 'admin'), createProject);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}:
+ *   get:
+ *     tags: [Projects]
+ *     summary: Get project by ID
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema: 
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Project details
+ *       404:
+ *         description: Project not found
+ */
+router.get('/:projectId', getProject);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}:
+ *   put:
+ *     tags: [Projects]
+ *     summary: Update project
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema: 
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               project_name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Project updated successfully
+ *       404:
+ *         description: Project not found
+ */
+router.put('/:projectId', authorizeRoles('manager', 'admin'), updateProject);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}:
+ *   delete:
+ *     tags: [Projects]
+ *     summary: Delete project
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema: 
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Project deleted successfully
+ *       404:
+ *         description: Project not found
+ */
+router.delete('/:projectId', authorizeRoles('manager', 'admin'), deleteProject);
 
 /**
  * @openapi
@@ -87,6 +163,6 @@ router.post('/', authorizeRoles('manager','admin'), createProject);
  *       404:
  *         description: Project not found
  */
-router.post('/:projectId/assign', authorizeRoles('manager','admin'), assignMembers);
+router.post('/:projectId/assign', authorizeRoles('manager', 'admin'), assignMembers);
 
 module.exports = router;

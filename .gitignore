@@ -41,3 +41,4 @@ logs/
 
 # Misc
 *.tsbuildinfo
+.vercel
