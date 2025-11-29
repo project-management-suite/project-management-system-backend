@@ -49,7 +49,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Simple health check
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use(errorHandler);
 
