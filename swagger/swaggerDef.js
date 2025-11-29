@@ -6,9 +6,17 @@ const options = {
     openapi: '3.0.0',
     info: {
       title: 'Project Management API',
-      version: '1.0.0'
+      version: '1.0.0',
+      description: 'A comprehensive project management system API'
     },
-    servers: [{ url: `http://localhost:${process.env.PORT || 5000}` }],
+    servers: [
+      {
+        url: process.env.NODE_ENV === 'production'
+          ? 'https://project-management-system-backend-8yt4co2oa.vercel.app'
+          : `http://localhost:${process.env.PORT || 5000}`,
+        description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server'
+      }
+    ],
     components: {
       securitySchemes: {
         bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }
@@ -20,7 +28,7 @@ const options = {
         },
         AuthRegisterInput: {
           type: 'object',
-          required: ['name','email','password'],
+          required: ['name', 'email', 'password'],
           properties: {
             name: { type: 'string' },
             email: { type: 'string', format: 'email' },
@@ -30,7 +38,7 @@ const options = {
         },
         AuthLoginInput: {
           type: 'object',
-          required: ['email','password'],
+          required: ['email', 'password'],
           properties: {
             email: { type: 'string', format: 'email' },
             password: { type: 'string', minLength: 6 }
