@@ -10,7 +10,7 @@
 
 **A powerful, scalable backend API for modern project management**
 
-[🔗 **Live API**](https://project-mngmt-backend-6egk5xxe4-divyansh-jhas-projects-5f01972a.vercel.app) | [📖 **API Docs**](https://project-mngmt-backend-6egk5xxe4-divyansh-jhas-projects-5f01972a.vercel.app/api-docs) | [🎨 **Frontend**](https://github.com/divyanshjha30/Project-Management-System)
+[🔗 **Live API**](https://project-mngmt-backend-6egk5xxe4-divyansh-jhas-projects-5f01972a.vercel.app) | [📖 **API Docs**](https://project-mngmt-backend-6egk5xxe4-divyansh-jhas-projects-5f01972a.vercel.app/api-docs) | [🎨 **Frontend**](https://github.com/project-management-suite/project-management-system-frontend)
 
 </div>
 
