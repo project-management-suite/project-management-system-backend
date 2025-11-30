@@ -7,6 +7,16 @@ const path = require('path');
 // Base URL for your API
 const BASE_URL = 'http://localhost:5000/api';
 
+// Check for --info flag
+const isInfoMode = process.argv.includes('--info');
+
+// Helper function for info logging
+function logInfo(...args) {
+    if (isInfoMode) {
+        console.log('   📋 INFO:', ...args);
+    }
+}
+
 // Test credentials
 const TEST_USERS = {
     admin: {
@@ -55,12 +65,33 @@ async function apiRequest(method, endpoint, data = null, token = null, isFormDat
             }
         }
 
+        // Log the command being executed
+        console.log(`\n   🔗 ${method} ${BASE_URL}${endpoint}`);
+        logInfo('Headers:', Object.keys(config.headers).map(key => `${key}: ${key === 'Authorization' ? config.headers[key].substring(0, 20) + '...' : config.headers[key]}`).join(', '));
+        if (data && !isFormData) {
+            logInfo('Request Data:', JSON.stringify(data, null, 2));
+        } else if (isFormData) {
+            logInfo('FormData:', 'Contains file upload data');
+        }
+
         const response = await axios(config);
+
+        // Log successful response
+        console.log(`   ✅ Response: ${response.status} ${response.statusText}`);
+        logInfo('Response Data:', JSON.stringify(response.data, null, 2));
+
         return { success: true, data: response.data, status: response.status };
     } catch (error) {
-        console.log(`   DEBUG: Request failed for ${method} ${endpoint}`);
-        console.log(`   DEBUG: Error status: ${error.response?.status || 'No status'}`);
-        console.log(`   DEBUG: Error data:`, error.response?.data || error.message);
+        // Log failed response with more details
+        console.log(`   ❌ Request failed: ${method} ${BASE_URL}${endpoint}`);
+        console.log(`   ❌ Error: ${error.response?.status || 'No status'} - ${error.response?.statusText || 'No status text'}`);
+
+        if (isInfoMode) {
+            console.log(`   📋 ERROR Details:`, JSON.stringify(error.response?.data || error.message, null, 2));
+        } else {
+            console.log(`   📋 Error:`, error.response?.data?.message || error.response?.data || error.message);
+        }
+
         return {
             success: false,
             error: error.response?.data || error.message,
@@ -797,6 +828,15 @@ async function runAllTests() {
     console.log(`Testing API at: ${BASE_URL}`);
     console.log(`Testing with users: Admin, Manager, Developer`);
 
+    if (isInfoMode) {
+        console.log('📋 INFO MODE: Verbose logging enabled');
+        console.log('📋 This will show detailed request/response information');
+    } else {
+        console.log('💡 Use --info flag for detailed request/response logging');
+    }
+
+    console.log('='.repeat(70));
+
     try {
         await testAuthentication();
         await testProfileEndpoints();
@@ -816,8 +856,15 @@ async function runAllTests() {
         console.log('📷 INCLUDES: Profile photo upload/update/delete with real test images');
         console.log('📁 INCLUDES: Project file upload/download/delete with real documents');
 
+        if (isInfoMode) {
+            console.log('\n📋 INFO MODE: Detailed logging was enabled for this run');
+        }
+
     } catch (error) {
         console.error('\n💥 UNEXPECTED ERROR DURING TESTING:', error.message);
+        if (isInfoMode) {
+            console.error('💥 FULL ERROR:', error);
+        }
     }
 }
 

@@ -4,13 +4,22 @@ This directory contains comprehensive tests for all backend API endpoints.
 
 ## 🚀 Quick Start
 
+### Basic Testing
+
 ```bash
 # 1. Start the backend server (from project root)
 cd /path/to/project-management-system-backend
 NODE_ENV=development npm run dev
 
-# 2. Run the comprehensive API tests (from project root or test directory)
+# 2. Run the comprehensive API tests
 node test/test-api.js
+```
+
+### Verbose Testing (with detailed logging)
+
+```bash
+# Run with --info flag for detailed request/response information
+node test/test-api.js --info
 ```
 
 ## 📁 Directory Structure
@@ -29,7 +38,7 @@ test/
 
 ## 🧪 Test Coverage
 
-The test suite covers **all 46 API endpoints** across 8 modules:
+The test suite covers **all 50 API endpoints** across 8 modules:
 
 ### 🔐 Authentication (4 endpoints)
 
@@ -103,12 +112,62 @@ The test suite covers **all 46 API endpoints** across 8 modules:
 
 ## 🎯 Test Features
 
-✅ **Comprehensive Coverage** - Tests all 46 endpoints  
-✅ **Real File Uploads** - Tests photo upload with actual images ✨  
+✅ **Comprehensive Coverage** - Tests all 50 endpoints  
+✅ **Real File Uploads** - Tests photo and document uploads with actual files ✨  
 ✅ **Role-Based Testing** - Tests Admin, Manager, Developer permissions  
 ✅ **Data Cleanup** - Automatically cleans up test data  
-✅ **Detailed Reporting** - Shows success/failure for each endpoint  
+✅ **Detailed Logging** - Use `--info` flag for verbose request/response details  
 ✅ **Error Handling** - Graceful handling of missing dependencies
+
+### Standard Output
+
+- HTTP method and endpoint URL for each request
+- Response status (✅ success / ❌ failure)
+- Basic error messages for quick debugging
+
+### Info Mode (`--info` flag)
+
+- All standard features plus:
+- Request headers (with token truncation for security)
+- Complete request data/payload (formatted JSON)
+- Full response data (formatted JSON)
+- Detailed error information with stack traces
+- File upload indicators for FormData requests
+
+### Example Output
+
+**Standard Mode:**
+
+```
+🔗 POST http://localhost:5000/api/auth/login
+✅ Response: 200 OK
+
+🔗 GET http://localhost:5000/api/profile
+❌ Request failed: GET http://localhost:5000/api/profile
+❌ Error: 401 - Unauthorized
+📋 Error: Invalid token
+```
+
+**Info Mode (`--info`):**
+
+```
+🔗 POST http://localhost:5000/api/auth/login
+📋 INFO: Headers: Content-Type: application/json
+📋 INFO: Request Data: {
+  "email": "testadmin@testapp.com",
+  "password": "testpass123"
+}
+✅ Response: 200 OK
+📋 INFO: Response Data: {
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "username": "testadmin",
+    "role": "ADMIN"
+  }
+}
+```
 
 ## 📋 Prerequisites
 
