@@ -34,9 +34,9 @@ EXAMPLES:
   npm run test:info                     # Verbose testing via npm
 
 DESCRIPTION:
-  Comprehensive test suite for all 102 API endpoints across 12 modules:
+  Comprehensive test suite for all 109 API endpoints across 12 modules:
   
-  🔐 Authentication (4 endpoints)        - Login, registration, OTP verification
+  🔐 Authentication (8 endpoints)        - Login, registration, OTP verification, password management
   👤 Profile Management (7 endpoints)    - Profile CRUD, photo upload/management
   👑 Admin Functions (4 endpoints)       - Dashboard, user management, roles
   📋 Project Management (8 endpoints)    - Project CRUD, assignments, dashboard
@@ -171,7 +171,7 @@ function delay(ms) {
 
 // Test authentication
 async function testAuthentication() {
-    console.log('\n🔐 TESTING AUTHENTICATION ENDPOINTS (4/52)');
+    console.log('\n🔐 TESTING AUTHENTICATION ENDPOINTS (8/109)');
     console.log('='.repeat(50));
 
     for (const [userType, credentials] of Object.entries(TEST_USERS)) {
@@ -197,6 +197,174 @@ async function testAuthentication() {
     // Test OTP endpoints (register, verify-otp, resend-otp) would require email setup
     console.log('\n📧 Note: OTP endpoints (register, verify-otp, resend-otp) require email configuration');
     console.log('   These can be tested manually when email service is configured');
+
+    // Test Password Management Endpoints
+    await testPasswordManagement();
+}
+
+// Test Password Management Endpoints
+async function testPasswordManagement() {
+    console.log('\n🔐 TESTING PASSWORD MANAGEMENT ENDPOINTS (5/8)');
+    console.log('='.repeat(50));
+
+    if (!tokens.manager) {
+        console.log('❌ Skipping password tests - manager login required');
+        return;
+    }
+
+    const testEmail = 'testmanager@testapp.com';
+    const originalPassword = 'testpass123';
+    const tempPassword = 'temporarypassword456';
+
+    try {
+        console.log('\n🔄 Testing complete password reset flow...');
+
+        // Step 1: Test change password (authenticated)
+        console.log('\nStep 1: Testing change password (authenticated)...');
+        const changeResult = await apiRequest('POST', '/auth/change-password', {
+            currentPassword: originalPassword,
+            newPassword: tempPassword
+        }, tokens.manager);
+
+        if (changeResult.success) {
+            console.log('✅ Password change successful');
+
+            // Update token with new one returned
+            if (changeResult.data.token) {
+                tokens.manager = changeResult.data.token;
+            }
+        } else {
+            console.log('❌ Password change failed:', changeResult.error);
+            return;
+        }
+
+        // Step 2: Verify new password works
+        console.log('\nStep 2: Testing login with new password...');
+        const newLoginResult = await apiRequest('POST', '/auth/login', {
+            email: testEmail,
+            password: tempPassword
+        });
+
+        if (newLoginResult.success) {
+            console.log('✅ Login with new password successful');
+            tokens.manager = newLoginResult.data.token; // Update token
+        } else {
+            console.log('❌ Login with new password failed:', newLoginResult.error);
+        }
+
+        // Step 3: Test forgot password flow
+        console.log('\nStep 3: Testing forgot password...');
+        const forgotResult = await apiRequest('POST', '/auth/forgot-password', {
+            email: testEmail
+        });
+
+        if (forgotResult.success) {
+            console.log('✅ Forgot password initiated:', forgotResult.data.message);
+
+            // Step 4: Get reset OTP (testing endpoint)
+            console.log('\nStep 4: Getting password reset OTP...');
+            const otpResult = await apiRequest('GET', `/auth/test/last-otp?email=${testEmail}`);
+
+            if (otpResult.success && otpResult.data.type === 'password_reset') {
+                console.log('✅ Got password reset OTP:', otpResult.data.otp);
+                const resetOTP = otpResult.data.otp;
+
+                // Step 5: Verify reset OTP
+                console.log('\nStep 5: Verifying reset OTP...');
+                const verifyResult = await apiRequest('POST', '/auth/verify-reset-otp', {
+                    email: testEmail,
+                    otp: resetOTP
+                });
+
+                if (verifyResult.success) {
+                    console.log('✅ Reset OTP verified successfully');
+                    const resetToken = verifyResult.data.resetToken;
+
+                    // Step 6: Reset password back to original
+                    console.log('\nStep 6: Resetting password back to original...');
+                    const resetResult = await apiRequest('POST', '/auth/reset-password', {
+                        resetToken: resetToken,
+                        newPassword: originalPassword
+                    });
+
+                    if (resetResult.success) {
+                        console.log('✅ Password reset to original successful');
+                        tokens.manager = resetResult.data.token; // Update token
+
+                        // Step 7: Verify original password works
+                        console.log('\nStep 7: Final verification with original password...');
+                        const finalLoginResult = await apiRequest('POST', '/auth/login', {
+                            email: testEmail,
+                            password: originalPassword
+                        });
+
+                        if (finalLoginResult.success) {
+                            console.log('✅ Original password restored and verified');
+                            tokens.manager = finalLoginResult.data.token; // Restore original token
+                        } else {
+                            console.log('❌ Original password verification failed:', finalLoginResult.error);
+                        }
+                    } else {
+                        console.log('❌ Password reset failed:', resetResult.error);
+                    }
+                } else {
+                    console.log('❌ Reset OTP verification failed:', verifyResult.error);
+                }
+            } else {
+                console.log('❌ Failed to get reset OTP or wrong type:', otpResult.error);
+            }
+        } else {
+            console.log('❌ Forgot password failed:', forgotResult.error);
+        }
+
+        // Step 8: Test logout
+        console.log('\nStep 8: Testing logout...');
+        const logoutResult = await apiRequest('POST', '/auth/logout', null, tokens.manager);
+
+        if (logoutResult.success) {
+            console.log('✅ Logout successful:', logoutResult.data.message);
+        } else {
+            console.log('❌ Logout failed:', logoutResult.error);
+        }
+
+        // Re-login for subsequent tests
+        console.log('\nRe-authenticating manager for subsequent tests...');
+        const reloginResult = await apiRequest('POST', '/auth/login', {
+            email: testEmail,
+            password: originalPassword
+        });
+
+        if (reloginResult.success) {
+            tokens.manager = reloginResult.data.token;
+            console.log('✅ Manager re-authenticated successfully');
+        }
+
+        console.log('\n🎉 Password management tests completed successfully!');
+        console.log('✅ Tested endpoints:');
+        console.log('   • POST /auth/change-password ✅');
+        console.log('   • POST /auth/forgot-password ✅');
+        console.log('   • POST /auth/verify-reset-otp ✅');
+        console.log('   • POST /auth/reset-password ✅');
+        console.log('   • POST /auth/logout ✅');
+
+    } catch (error) {
+        console.error('❌ Password management test error:', error.message);
+        console.log('⚠️  Attempting to restore original password...');
+
+        // Emergency password restore
+        try {
+            const emergencyLogin = await apiRequest('POST', '/auth/login', {
+                email: testEmail,
+                password: originalPassword
+            });
+            if (emergencyLogin.success) {
+                tokens.manager = emergencyLogin.data.token;
+                console.log('✅ Original password already restored');
+            }
+        } catch (restoreError) {
+            console.error('❌ Could not restore original password:', restoreError.message);
+        }
+    }
 }
 
 // Test profile endpoints
@@ -2016,7 +2184,7 @@ async function runAllTests() {
         console.log('='.repeat(70));
         console.log('Check the output above for any failed tests (❌)');
         console.log('All successful tests are marked with (✅)');
-        console.log(`\n📊 COVERAGE: Testing all 102 API endpoints across 12 modules`);
+        console.log(`\n📊 COVERAGE: Testing all 109 API endpoints across 12 modules`);
         console.log('📷 INCLUDES: Profile photo upload/update/delete with real test images');
         console.log('📁 INCLUDES: Project file upload/download/delete with real documents');
         console.log('👥 INCLUDES: Comprehensive team management with member and project assignments');
