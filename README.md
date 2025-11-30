@@ -19,12 +19,14 @@
 ## ✨ Features
 
 - 🔐 **JWT Authentication** - Secure token-based authentication with role management
+- 📧 **Email OTP Verification** - Secure user registration with email verification
 - 👥 **Role-Based Access Control** - ADMIN, MANAGER, DEVELOPER permissions
 - 📋 **Project Management** - Complete CRUD operations for project lifecycle
 - ✅ **Task Management** - Create, assign, track, and manage development tasks
 - 📁 **File Management** - Upload and organize project-related files
 - 📊 **Dashboard Analytics** - Real-time statistics and project insights
 - 📚 **API Documentation** - Interactive Swagger UI documentation
+- 📮 **Email Service** - Professional HTML email templates with nodemailer
 - 🔄 **RESTful Design** - Clean, consistent API endpoints
 
 ## 🛠️ Tech Stack
@@ -36,6 +38,7 @@
 | **Supabase**   | Database & Auth     | Latest  |
 | **PostgreSQL** | Primary Database    | v14+    |
 | **JWT**        | Authentication      | Latest  |
+| **Nodemailer** | Email Service       | Latest  |
 | **Swagger**    | API Documentation   | v3.x    |
 | **Vercel**     | Deployment Platform | -       |
 
@@ -78,6 +81,13 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 JWT_SECRET=your_super_secure_jwt_secret_key
 JWT_EXPIRES_IN=7d
 
+# 📧 Email Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USER=your-gmail-address@gmail.com
+SMTP_PASS=your-gmail-app-password
+FROM_EMAIL="Employee Management System <your-gmail-address@gmail.com>"
+
 # 🚀 Server Configuration
 PORT=5000
 NODE_ENV=development
@@ -87,32 +97,52 @@ NODE_ENV=development
 
 ```sql
 -- Core tables structure
-profiles (user_id, username, email, role, created_at)
+profiles (user_id, username, email, role, email_verified, created_at)
 projects (project_id, project_name, description, owner_manager_id)
 tasks (task_id, project_id, title, description, status, priority)
 task_assignments (assignment_id, task_id, developer_id)
 files (file_id, project_id, task_id, file_name, file_path)
+email_otps (id, email, otp, expires_at, used, created_at)
+pending_registrations (id, email, user_data, created_at)
 ```
 
 ## 📡 API Endpoints
 
 <details>
-<summary>🔐 <strong>Authentication</strong></summary>
+<summary>🔐 <strong>Authentication & Verification</strong></summary>
 
-| Method | Endpoint             | Description       | Access |
-| ------ | -------------------- | ----------------- | ------ |
-| `POST` | `/api/auth/register` | Register new user | Public |
-| `POST` | `/api/auth/login`    | User login        | Public |
+| Method | Endpoint               | Description                   | Access |
+| ------ | ---------------------- | ----------------------------- | ------ |
+| `POST` | `/api/auth/register`   | Register user & send OTP      | Public |
+| `POST` | `/api/auth/verify-otp` | Verify OTP & complete signup  | Public |
+| `POST` | `/api/auth/resend-otp` | Resend OTP verification email | Public |
+| `POST` | `/api/auth/login`      | User login (verified users)   | Public |
 
-**Example Request:**
+**Registration & OTP Flow:**
 
 ```json
+// 1. Register user (sends OTP email)
 POST /api/auth/register
 {
   "username": "john_doe",
   "email": "john@example.com",
   "password": "securepassword123",
   "role": "DEVELOPER"
+}
+Response: { "message": "OTP sent to your email..." }
+
+// 2. Verify OTP (completes registration)
+POST /api/auth/verify-otp
+{
+  "email": "john@example.com",
+  "otp": "123456"
+}
+Response: { "token": "jwt_token", "user": {...} }
+
+// 3. Resend OTP if needed
+POST /api/auth/resend-otp
+{
+  "email": "john@example.com"
 }
 ```
 

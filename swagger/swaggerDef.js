@@ -28,12 +28,31 @@ const options = {
         },
         AuthRegisterInput: {
           type: 'object',
-          required: ['name', 'email', 'password'],
+          required: ['username', 'email', 'password', 'role'],
           properties: {
-            name: { type: 'string' },
-            email: { type: 'string', format: 'email' },
-            password: { type: 'string', minLength: 6 },
-            role: { type: 'string', description: 'Optional initial role' }
+            username: { type: 'string', description: 'User display name' },
+            email: { type: 'string', format: 'email', description: 'User email address' },
+            password: { type: 'string', minLength: 6, description: 'User password (min 6 characters)' },
+            role: {
+              type: 'string',
+              enum: ['ADMIN', 'MANAGER', 'DEVELOPER'],
+              description: 'User role in the system'
+            }
+          }
+        },
+        OTPVerifyInput: {
+          type: 'object',
+          required: ['email', 'otp'],
+          properties: {
+            email: { type: 'string', format: 'email', description: 'Email address used during registration' },
+            otp: { type: 'string', pattern: '^[0-9]{6}$', description: '6-digit OTP code received via email' }
+          }
+        },
+        OTPResendInput: {
+          type: 'object',
+          required: ['email'],
+          properties: {
+            email: { type: 'string', format: 'email', description: 'Email address to resend OTP to' }
           }
         },
         AuthLoginInput: {
@@ -47,17 +66,36 @@ const options = {
         UserPublic: {
           type: 'object',
           properties: {
-            id: { type: 'string' },
-            name: { type: 'string' },
-            email: { type: 'string', format: 'email' },
-            role: { type: 'string' }
+            id: { type: 'string', description: 'User unique identifier' },
+            username: { type: 'string', description: 'User display name' },
+            email: { type: 'string', format: 'email', description: 'User email address' },
+            role: {
+              type: 'string',
+              enum: ['ADMIN', 'MANAGER', 'DEVELOPER'],
+              description: 'User role in the system'
+            },
+            email_verified: { type: 'boolean', description: 'Whether email has been verified' },
+            created_at: { type: 'string', format: 'date-time', description: 'Account creation timestamp' }
           }
         },
         AuthResponse: {
           type: 'object',
           properties: {
-            token: { type: 'string' },
+            token: { type: 'string', description: 'JWT authentication token' },
             user: { $ref: '#/components/schemas/UserPublic' }
+          }
+        },
+        OTPRegisterResponse: {
+          type: 'object',
+          properties: {
+            message: { type: 'string', example: 'OTP sent to your email. Please verify to complete registration.' },
+            tempUserId: { type: 'string', description: 'Temporary user identifier for verification process' }
+          }
+        },
+        OTPSuccessResponse: {
+          type: 'object',
+          properties: {
+            message: { type: 'string', example: 'New OTP sent to your email' }
           }
         }
       }

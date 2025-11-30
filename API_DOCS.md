@@ -2,7 +2,7 @@
 
 ## Overview
 
-This backend API provides a REST interface for the Project Management System. It works with Supabase as the database and provides role-based access control for ADMIN, MANAGER, and DEVELOPER users.
+This backend API provides a REST interface for the Project Management System. It includes email-based OTP verification for secure user registration, works with Supabase as the database, and provides role-based access control for ADMIN, MANAGER, and DEVELOPER users.
 
 ## Base URL
 
@@ -20,19 +20,59 @@ Authorization: Bearer <jwt_token>
 
 ## API Endpoints
 
-### Authentication (`/api/auth`)
+### Authentication & OTP Verification (`/api/auth`)
 
-#### Register User
+#### Register User (Step 1: Send OTP)
 
 - **POST** `/auth/register`
 - **Body**: `{ username, email, password, role }`
-- **Response**: `{ token, user: { id, username, email, role } }`
+- **Response**: `{ message: "OTP sent to your email. Please verify to complete registration.", tempUserId: "uuid" }`
+- **Description**: Initiates registration by sending a 6-digit OTP to the user's email. User data is temporarily stored until verification.
+
+#### Verify OTP (Step 2: Complete Registration)
+
+- **POST** `/auth/verify-otp`
+- **Body**: `{ email, otp }`
+- **Response**: `{ message: "Email verified and account created successfully", token: "jwt_token", user: { id, username, email, role, email_verified: true } }`
+- **Description**: Verifies the OTP and completes user registration. Returns JWT token for immediate login.
+
+#### Resend OTP
+
+- **POST** `/auth/resend-otp`
+- **Body**: `{ email }`
+- **Response**: `{ message: "New OTP sent to your email" }`
+- **Description**: Resends a new OTP to the user's email if the previous one expired or was lost.
 
 #### Login User
 
 - **POST** `/auth/login`
 - **Body**: `{ email, password }`
-- **Response**: `{ token, user: { id, username, email, role } }`
+- **Response**: `{ token, user: { id, username, email, role, email_verified } }`
+- **Description**: Authenticates user login. Only users with verified emails can log in.
+
+**Registration Flow Example:**
+
+```javascript
+// Step 1: Register and send OTP
+POST /auth/register
+{
+  "username": "john_doe",
+  "email": "john@example.com",
+  "password": "securepassword123",
+  "role": "DEVELOPER"
+}
+// Response: { "message": "OTP sent to your email...", "tempUserId": "..." }
+
+// Step 2: User receives email with 6-digit code, then verifies
+POST /auth/verify-otp
+{
+  "email": "john@example.com",
+  "otp": "123456"
+}
+// Response: { "token": "jwt_token", "user": {...}, "message": "Email verified and account created successfully" }
+
+// Step 3: User is now logged in and can use the token
+```
 
 ### Projects (`/api/projects`)
 
@@ -191,8 +231,38 @@ Authorization: Bearer <jwt_token>
   username: "string",
   email: "string",
   role: "ADMIN" | "MANAGER" | "DEVELOPER",
+  email_verified: "boolean",
   created_at: "timestamp",
   updated_at: "timestamp"
+}
+```
+
+### OTP Record
+
+```javascript
+{
+  id: "uuid",
+  email: "string",
+  otp: "string",
+  expires_at: "timestamp",
+  used: "boolean",
+  created_at: "timestamp"
+}
+```
+
+### Pending Registration
+
+```javascript
+{
+  id: "uuid",
+  email: "string",
+  user_data: {
+    username: "string",
+    email: "string",
+    password_hash: "string",
+    role: "string"
+  },
+  created_at: "timestamp"
 }
 ```
 
@@ -292,8 +362,18 @@ This backend is designed to work alongside the existing Supabase frontend. The f
 
 The backend provides additional features like:
 
+- **Email OTP Verification**: Secure user registration with 6-digit email verification
+- **Professional Email Templates**: HTML-formatted emails with modern design
 - Advanced file upload handling
 - Complex permission checks
 - Email notifications
 - Background job processing
 - Detailed audit logging
+
+## Email System Features
+
+- **SMTP Integration**: Uses Gmail SMTP with nodemailer for reliable email delivery
+- **OTP Security**: 6-digit codes with 10-minute expiration
+- **Professional Templates**: Branded HTML emails with responsive design
+- **Automatic Cleanup**: Expired OTPs and pending registrations are automatically cleaned
+- **Resend Functionality**: Users can request new OTP codes if needed

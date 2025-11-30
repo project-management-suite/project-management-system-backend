@@ -16,6 +16,41 @@ const signToken = (user) => {
   );
 };
 
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register new user and send OTP verification email
+ *     description: Initiates user registration by sending a 6-digit OTP to the provided email. User data is stored temporarily until email verification is completed.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/AuthRegisterInput'
+ *           example:
+ *             username: "john_doe"
+ *             email: "john@example.com"
+ *             password: "securepassword123"
+ *             role: "DEVELOPER"
+ *     responses:
+ *       200:
+ *         description: OTP sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OTPRegisterResponse'
+ *       400:
+ *         description: Email already in use or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to send verification email or server error
+ */
+
 exports.register = async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
@@ -67,6 +102,44 @@ exports.register = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/auth/verify-otp:
+ *   post:
+ *     summary: Verify OTP and complete user registration
+ *     description: Verifies the 6-digit OTP sent to user's email and completes the registration process. Returns a JWT token for immediate login.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/OTPVerifyInput'
+ *           example:
+ *             email: "john@example.com"
+ *             otp: "123456"
+ *     responses:
+ *       200:
+ *         description: Email verified successfully, user created and logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: "Email verified and account created successfully"
+ *                 - $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Invalid OTP, expired OTP, or missing registration data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error during user creation
+ */
 exports.verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -118,6 +191,37 @@ exports.verifyOTP = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/auth/resend-otp:
+ *   post:
+ *     summary: Resend OTP verification email
+ *     description: Generates and sends a new 6-digit OTP to the user's email if the previous one expired or was lost. Only works for pending registrations.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/OTPResendInput'
+ *           example:
+ *             email: "john@example.com"
+ *     responses:
+ *       200:
+ *         description: New OTP sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OTPSuccessResponse'
+ *       400:
+ *         description: Email is required or no pending registration found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to send email or server error
+ */
 exports.resendOTP = async (req, res) => {
   try {
     const { email } = req.body;
@@ -148,6 +252,38 @@ exports.resendOTP = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: User login
+ *     description: Authenticates user with email and password. Only users with verified emails can login successfully.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/AuthLoginInput'
+ *           example:
+ *             email: "john@example.com"
+ *             password: "securepassword123"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Invalid credentials or email not verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error during authentication
+ */
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
