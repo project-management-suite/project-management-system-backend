@@ -93,12 +93,35 @@ const apiDocsHTML = `
       <div class="endpoint">
         <div class="method post">POST /api/auth/register</div>
         <div class="endpoint-info">
-          <div class="description">Register a new user</div>
+          <div class="description">Register a new user (sends OTP to email)</div>
           <pre>{
   "username": "string",
   "email": "string",
   "password": "string",
   "role": "ADMIN | MANAGER | DEVELOPER"
+}</pre>
+          <div class="description"><strong>Response:</strong> OTP sent to email for verification</div>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method post">POST /api/auth/verify-otp</div>
+        <div class="endpoint-info">
+          <div class="description">Verify OTP and complete registration</div>
+          <pre>{
+  "email": "string",
+  "otp": "123456"
+}</pre>
+          <div class="description"><strong>Response:</strong> JWT token and user data</div>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method post">POST /api/auth/resend-otp</div>
+        <div class="endpoint-info">
+          <div class="description">Resend OTP to email</div>
+          <pre>{
+  "email": "string"
 }</pre>
         </div>
       </div>
@@ -106,7 +129,7 @@ const apiDocsHTML = `
       <div class="endpoint">
         <div class="method post">POST /api/auth/login</div>
         <div class="endpoint-info">
-          <div class="description">Login user</div>
+          <div class="description">Login user (requires verified email)</div>
           <pre>{
   "email": "string",
   "password": "string"

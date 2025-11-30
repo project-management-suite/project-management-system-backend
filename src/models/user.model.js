@@ -10,11 +10,12 @@ class User {
     this.username = data.username;
     this.email = data.email;
     this.role = data.role;
+    this.email_verified = data.email_verified || false;
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
   }
 
-  static async create({ username, email, password, role = 'DEVELOPER' }) {
+  static async create({ username, email, password, role = 'DEVELOPER', email_verified = false }) {
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -23,24 +24,46 @@ class User {
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true,
+      email_confirm: email_verified,
       user_metadata: {
         username,
-        role
+        role,
+        email_verified
       }
     });
 
     if (authError) throw authError;
 
-    // Profile should be created automatically via trigger
-    // But let's fetch it to return
+    // Update profile with email verification status
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .update({ email_verified })
       .eq('user_id', authData.user.id)
+      .select()
       .single();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      // If profile doesn't exist yet, try to fetch it
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', authData.user.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update with email_verified
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from('profiles')
+        .update({ email_verified })
+        .eq('user_id', authData.user.id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      return new User(updatedProfile);
+    }
 
     return new User(profile);
   }

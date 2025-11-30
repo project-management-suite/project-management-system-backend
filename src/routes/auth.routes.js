@@ -1,13 +1,13 @@
 // src/routes/auth.routes.js
 const router = require('express').Router();
-const { register, login } = require('../controllers/auth.controller');
+const { register, login, verifyOTP, resendOTP } = require('../controllers/auth.controller');
 
 /**
  * @openapi
  * /api/auth/register:
  *   post:
  *     tags: [Auth]
- *     summary: Register a new user
+ *     summary: Register a new user (sends OTP to email)
  *     requestBody:
  *       required: true
  *       content:
@@ -15,10 +15,16 @@ const { register, login } = require('../controllers/auth.controller');
  *           schema: { $ref: '#/components/schemas/AuthRegisterInput' }
  *     responses:
  *       200:
- *         description: User registered
+ *         description: OTP sent to email
  *         content:
  *           application/json:
- *             schema: { $ref: '#/components/schemas/AuthResponse' }
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 email:
+ *                   type: string
  *       400:
  *         description: Email already in use / validation error
  *         content:
@@ -26,6 +32,76 @@ const { register, login } = require('../controllers/auth.controller');
  *             schema: { $ref: '#/components/schemas/Error' }
  */
 router.post('/register', register);
+
+/**
+ * @openapi
+ * /api/auth/verify-otp:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Verify OTP and complete registration
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, otp]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               otp:
+ *                 type: string
+ *                 minLength: 6
+ *                 maxLength: 6
+ *     responses:
+ *       201:
+ *         description: Email verified and account created
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/AuthResponse' }
+ *       400:
+ *         description: Invalid or expired OTP
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
+router.post('/verify-otp', verifyOTP);
+
+/**
+ * @openapi
+ * /api/auth/resend-otp:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Resend OTP to email
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: New OTP sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: No pending registration found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
+router.post('/resend-otp', resendOTP);
 
 /**
  * @openapi
@@ -45,7 +121,7 @@ router.post('/register', register);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/AuthResponse' }
  *       401:
- *         description: Invalid credentials
+ *         description: Invalid credentials or email not verified
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
