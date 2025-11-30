@@ -34,16 +34,20 @@ EXAMPLES:
   npm run test:info                     # Verbose testing via npm
 
 DESCRIPTION:
-  Comprehensive test suite for all 52 API endpoints across 8 modules:
+  Comprehensive test suite for all 102 API endpoints across 12 modules:
   
-  🔐 Authentication (4 endpoints)      - Login, registration, OTP verification
-  👤 Profile Management (7 endpoints)  - Profile CRUD, photo upload/management
-  👑 Admin Functions (4 endpoints)     - Dashboard, user management, roles
-  📋 Project Management (8 endpoints)  - Project CRUD, assignments, dashboard
-  ✅ Task Management (8 endpoints)     - Task CRUD, assignments, status updates
-  📅 Calendar System (8 endpoints)     - Holidays, deadlines, reminders
-  📊 Reporting (5 endpoints)           - Analytics, reports, PDF export
-  📁 File Management (6 endpoints)     - File upload, download, management
+  🔐 Authentication (4 endpoints)        - Login, registration, OTP verification
+  👤 Profile Management (7 endpoints)    - Profile CRUD, photo upload/management
+  👑 Admin Functions (4 endpoints)       - Dashboard, user management, roles
+  📋 Project Management (8 endpoints)    - Project CRUD, assignments, dashboard
+  ✅ Task Management (8 endpoints)       - Task CRUD, assignments, status updates
+  🔄 Subtask Management (12 endpoints)   - Subtask CRUD, assignments, estimates, statistics
+  ⏱️ Work Log System (12 endpoints)      - Work hour logging, bulk operations, statistics
+  📊 Estimation System (16 endpoints)    - Task/subtask estimates, accuracy tracking, trends
+  📅 Calendar System (8 endpoints)       - Holidays, deadlines, reminders
+  📊 Reporting (5 endpoints)             - Analytics, reports, PDF export
+  📁 File Management (6 endpoints)       - File upload, download, management
+  👥 Team Management (14 endpoints)      - Team CRUD, member management, assignments
 
 REQUIREMENTS:
   - Backend server running on http://localhost:5000
@@ -1016,6 +1020,17 @@ async function cleanup() {
     console.log('\n🧹 CLEANING UP TEST DATA');
     console.log('='.repeat(50));
 
+    // Clean up subtasks first (they depend on tasks)
+    if (global.testSubtaskId && tokens.manager) {
+        console.log('\nDeleting test subtask:');
+        const deleteSubtaskResult = await apiRequest('DELETE', `/subtasks/${global.testSubtaskId}`, null, tokens.manager);
+        if (deleteSubtaskResult.success) {
+            console.log('✅ Test subtask deleted successfully');
+        } else {
+            console.log('❌ Failed to delete test subtask:', deleteSubtaskResult.error);
+        }
+    }
+
     if (taskId && tokens.manager) {
         console.log('\nDeleting test task:');
         const deleteTaskResult = await apiRequest('DELETE', `/tasks/${taskId}`, null, tokens.manager);
@@ -1033,6 +1048,597 @@ async function cleanup() {
             console.log('✅ Test project deleted successfully');
         } else {
             console.log('❌ Failed to delete test project:', deleteProjectResult.error);
+        }
+    }
+
+    console.log('\n📊 Cleanup Summary:');
+    console.log('   - Work logs and estimates are automatically cleaned up with subtask/task deletion');
+    console.log('   - Test subtasks, tasks, and projects have been removed');
+    console.log('   - Database relationships properly maintained during cleanup');
+}
+
+// Test subtask endpoints
+async function testSubtaskEndpoints() {
+    console.log('\n🔄 TESTING SUBTASK ENDPOINTS (12/52)');
+    console.log('='.repeat(50));
+
+    if (!tokens.manager || !taskId) {
+        console.log('❌ No manager token or task ID available, skipping subtask tests');
+        return;
+    }
+
+    let subtaskId = null;
+    let subtaskEstimateId = null;
+
+    // Test create subtask
+    console.log('\nTesting create subtask:');
+    const createSubtaskResult = await apiRequest('POST', '/subtasks', {
+        parent_task_id: taskId,
+        title: 'Test Subtask API',
+        description: 'A test subtask created by automated API testing script',
+        priority: 'MEDIUM',
+        estimated_hours: 4.5,
+        start_date: '2025-12-02',
+        end_date: '2025-12-05'
+    }, tokens.manager);
+
+    if (createSubtaskResult.success && createSubtaskResult.data && createSubtaskResult.data.subtask) {
+        subtaskId = createSubtaskResult.data.subtask.subtask_id;
+        console.log('✅ Create subtask successful');
+        console.log(`   Subtask ID: ${subtaskId}`);
+        console.log(`   Title: ${createSubtaskResult.data.subtask.title}`);
+    } else {
+        console.log('❌ Create subtask failed:', createSubtaskResult.error);
+        return;
+    }
+
+    // Test get user's subtasks
+    console.log('\nTesting get user subtasks:');
+    const userSubtasksResult = await apiRequest('GET', '/subtasks/my', null, tokens.developer);
+    if (userSubtasksResult.success) {
+        const subtasks = userSubtasksResult.data.subtasks || [];
+        console.log(`✅ Get user subtasks successful - Found ${subtasks.length} subtasks`);
+    } else {
+        console.log('❌ Get user subtasks failed:', userSubtasksResult.error);
+    }
+
+    // Test get subtasks for task
+    console.log('\nTesting get task subtasks:');
+    const taskSubtasksResult = await apiRequest('GET', `/subtasks/task/${taskId}`, null, tokens.manager);
+    if (taskSubtasksResult.success) {
+        const subtasks = taskSubtasksResult.data.subtasks || [];
+        console.log(`✅ Get task subtasks successful - Found ${subtasks.length} subtasks`);
+    } else {
+        console.log('❌ Get task subtasks failed:', taskSubtasksResult.error);
+    }
+
+    // Test get subtasks for project
+    console.log('\nTesting get project subtasks:');
+    const projectSubtasksResult = await apiRequest('GET', `/subtasks/project/${projectId}`, null, tokens.manager);
+    if (projectSubtasksResult.success) {
+        const subtasks = projectSubtasksResult.data.subtasks || [];
+        console.log(`✅ Get project subtasks successful - Found ${subtasks.length} subtasks`);
+    } else {
+        console.log('❌ Get project subtasks failed:', projectSubtasksResult.error);
+    }
+
+    // Test get specific subtask
+    console.log('\nTesting get specific subtask:');
+    const subtaskResult = await apiRequest('GET', `/subtasks/${subtaskId}`, null, tokens.manager);
+    if (subtaskResult.success) {
+        console.log('✅ Get specific subtask successful');
+        console.log(`   Title: ${subtaskResult.data.subtask.title}`);
+        console.log(`   Status: ${subtaskResult.data.subtask.status}`);
+    } else {
+        console.log('❌ Get specific subtask failed:', subtaskResult.error);
+    }
+
+    // Test update subtask
+    console.log('\nTesting update subtask:');
+    const updateSubtaskResult = await apiRequest('PUT', `/subtasks/${subtaskId}`, {
+        title: 'Updated Test Subtask API',
+        status: 'IN_PROGRESS',
+        priority: 'HIGH',
+        estimated_hours: 6.0
+    }, tokens.manager);
+    if (updateSubtaskResult.success) {
+        console.log('✅ Update subtask successful');
+    } else {
+        console.log('❌ Update subtask failed:', updateSubtaskResult.error);
+    }
+
+    // Test assign user to subtask
+    if (userProfiles.developer && userProfiles.developer.user_id) {
+        console.log('\nTesting assign user to subtask:');
+        const assignResult = await apiRequest('POST', `/subtasks/${subtaskId}/assign`, {
+            assigneeId: userProfiles.developer.user_id
+        }, tokens.manager);
+        if (assignResult.success) {
+            console.log('✅ Assign user to subtask successful');
+            console.log(`   Assigned: ${userProfiles.developer.username || 'Developer'}`);
+
+            // Test unassign user from subtask
+            console.log('\nTesting unassign user from subtask:');
+            const unassignResult = await apiRequest('POST', `/subtasks/${subtaskId}/unassign/${userProfiles.developer.user_id}`, null, tokens.manager);
+            if (unassignResult.success) {
+                console.log('✅ Unassign user from subtask successful');
+            } else {
+                console.log('❌ Unassign user from subtask failed:', unassignResult.error);
+            }
+        } else {
+            console.log('❌ Assign user to subtask failed:', assignResult.error);
+        }
+    }
+
+    // Test add estimate to subtask
+    console.log('\nTesting add estimate to subtask:');
+    const estimateResult = await apiRequest('POST', `/subtasks/${subtaskId}/estimate`, {
+        estimatedHours: 8.5,
+        notes: 'Initial estimate for subtask completion',
+        estimateType: 'INITIAL'
+    }, tokens.developer);
+    if (estimateResult.success) {
+        console.log('✅ Add estimate to subtask successful');
+        console.log(`   Estimated hours: 8.5`);
+    } else {
+        console.log('❌ Add estimate to subtask failed:', estimateResult.error);
+    }
+
+    // Test get subtask statistics
+    console.log('\nTesting get subtask statistics:');
+    const statsResult = await apiRequest('GET', `/subtasks/${subtaskId}/stats`, null, tokens.manager);
+    if (statsResult.success) {
+        console.log('✅ Get subtask statistics successful');
+        if (statsResult.data.stats) {
+            console.log(`   Status: ${statsResult.data.stats.status}`);
+            console.log(`   Estimated hours: ${statsResult.data.stats.estimated_hours || 'N/A'}`);
+        }
+    } else {
+        console.log('❌ Get subtask statistics failed:', statsResult.error);
+    }
+
+    // Store subtask ID for other tests
+    global.testSubtaskId = subtaskId;
+
+    return subtaskId;
+}
+
+// Test work log endpoints
+async function testWorkLogEndpoints() {
+    console.log('\n⏱️ TESTING WORK LOG ENDPOINTS (12/52)');
+    console.log('='.repeat(50));
+
+    if (!tokens.developer) {
+        console.log('❌ No developer token available, skipping work log tests');
+        return;
+    }
+
+    let workLogId = null;
+
+    // Test create work log for task
+    if (taskId) {
+        console.log('\nTesting create work log for task:');
+        const createWorkLogResult = await apiRequest('POST', '/worklogs', {
+            task_id: taskId,
+            hours_logged: 3.5,
+            work_date: '2025-12-01',
+            description: 'Implemented core functionality for the task',
+            log_type: 'DEVELOPMENT'
+        }, tokens.developer);
+
+        if (createWorkLogResult.success && createWorkLogResult.data && createWorkLogResult.data.workLog) {
+            workLogId = createWorkLogResult.data.workLog.log_id;
+            console.log('✅ Create work log for task successful');
+            console.log(`   Work Log ID: ${workLogId}`);
+            console.log(`   Hours logged: ${createWorkLogResult.data.workLog.hours_logged}`);
+        } else {
+            console.log('❌ Create work log for task failed:', createWorkLogResult.error);
+        }
+    }
+
+    // Test create work log for subtask
+    if (global.testSubtaskId) {
+        console.log('\nTesting create work log for subtask:');
+        const createSubtaskLogResult = await apiRequest('POST', '/worklogs', {
+            subtask_id: global.testSubtaskId,
+            hours_logged: 2.0,
+            work_date: '2025-12-02',
+            description: 'Completed initial setup and configuration',
+            log_type: 'DEVELOPMENT'
+        }, tokens.developer);
+
+        if (createSubtaskLogResult.success) {
+            console.log('✅ Create work log for subtask successful');
+            console.log(`   Hours logged: ${createSubtaskLogResult.data.workLog.hours_logged}`);
+        } else {
+            console.log('❌ Create work log for subtask failed:', createSubtaskLogResult.error);
+        }
+    }
+
+    // Test bulk work log creation
+    console.log('\nTesting bulk work log creation:');
+    const bulkWorkLogs = [
+        {
+            task_id: taskId,
+            hours_logged: 1.5,
+            work_date: '2025-12-03',
+            description: 'Code review and testing',
+            log_type: 'REVIEW'
+        },
+        {
+            task_id: taskId,
+            hours_logged: 2.0,
+            work_date: '2025-12-04',
+            description: 'Bug fixes and documentation',
+            log_type: 'BUG_FIX'
+        }
+    ];
+
+    const bulkCreateResult = await apiRequest('POST', '/worklogs/bulk', {
+        workLogs: bulkWorkLogs
+    }, tokens.developer);
+
+    if (bulkCreateResult.success) {
+        console.log('✅ Bulk work log creation successful');
+        console.log(`   Created: ${bulkCreateResult.data.created?.length || 0} work logs`);
+    } else {
+        console.log('❌ Bulk work log creation failed:', bulkCreateResult.error);
+    }
+
+    // Test get user's work logs
+    console.log('\nTesting get user work logs:');
+    const userWorkLogsResult = await apiRequest('GET', '/worklogs/my', null, tokens.developer);
+    if (userWorkLogsResult.success) {
+        const workLogs = userWorkLogsResult.data.workLogs || [];
+        console.log(`✅ Get user work logs successful - Found ${workLogs.length} logs`);
+        if (workLogs.length > 0) {
+            const totalHours = workLogs.reduce((sum, log) => sum + parseFloat(log.hours_logged || 0), 0);
+            console.log(`   Total hours logged: ${totalHours.toFixed(1)}`);
+        }
+    } else {
+        console.log('❌ Get user work logs failed:', userWorkLogsResult.error);
+    }
+
+    // Test get user's work statistics
+    console.log('\nTesting get user work statistics:');
+    const userStatsResult = await apiRequest('GET', '/worklogs/my/stats', null, tokens.developer);
+    if (userStatsResult.success) {
+        console.log('✅ Get user work statistics successful');
+        if (userStatsResult.data.stats) {
+            console.log(`   Total hours: ${userStatsResult.data.stats.totalHours || 0}`);
+            console.log(`   Total logs: ${userStatsResult.data.stats.totalLogs || 0}`);
+        }
+    } else {
+        console.log('❌ Get user work statistics failed:', userStatsResult.error);
+    }
+
+    // Test get recent work logs
+    console.log('\nTesting get recent work logs:');
+    const recentLogsResult = await apiRequest('GET', '/worklogs/recent?days=7', null, tokens.developer);
+    if (recentLogsResult.success) {
+        const recentLogs = recentLogsResult.data.workLogs || [];
+        console.log(`✅ Get recent work logs successful - Found ${recentLogs.length} recent logs`);
+    } else {
+        console.log('❌ Get recent work logs failed:', recentLogsResult.error);
+    }
+
+    // Test get work logs for task
+    if (taskId) {
+        console.log('\nTesting get task work logs:');
+        const taskLogsResult = await apiRequest('GET', `/worklogs/task/${taskId}`, null, tokens.manager);
+        if (taskLogsResult.success) {
+            const taskLogs = taskLogsResult.data.workLogs || [];
+            console.log(`✅ Get task work logs successful - Found ${taskLogs.length} logs`);
+        } else {
+            console.log('❌ Get task work logs failed:', taskLogsResult.error);
+        }
+    }
+
+    // Test get work logs for subtask
+    if (global.testSubtaskId) {
+        console.log('\nTesting get subtask work logs:');
+        const subtaskLogsResult = await apiRequest('GET', `/worklogs/subtask/${global.testSubtaskId}`, null, tokens.manager);
+        if (subtaskLogsResult.success) {
+            const subtaskLogs = subtaskLogsResult.data.workLogs || [];
+            console.log(`✅ Get subtask work logs successful - Found ${subtaskLogs.length} logs`);
+        } else {
+            console.log('❌ Get subtask work logs failed:', subtaskLogsResult.error);
+        }
+    }
+
+    // Test get project work logs (Manager/Admin only)
+    if (projectId && tokens.manager) {
+        console.log('\nTesting get project work logs (Manager):');
+        const projectLogsResult = await apiRequest('GET', `/worklogs/project/${projectId}`, null, tokens.manager);
+        if (projectLogsResult.success) {
+            const projectLogs = projectLogsResult.data.workLogs || [];
+            console.log(`✅ Get project work logs successful - Found ${projectLogs.length} logs`);
+        } else {
+            console.log('❌ Get project work logs failed:', projectLogsResult.error);
+        }
+    }
+
+    // Test get project work statistics (Manager/Admin only)
+    if (projectId && tokens.manager) {
+        console.log('\nTesting get project work statistics (Manager):');
+        const projectStatsResult = await apiRequest('GET', `/worklogs/project/${projectId}/stats`, null, tokens.manager);
+        if (projectStatsResult.success) {
+            console.log('✅ Get project work statistics successful');
+            if (projectStatsResult.data.stats) {
+                console.log(`   Total hours: ${projectStatsResult.data.stats.totalHours || 0}`);
+                console.log(`   Total logs: ${projectStatsResult.data.stats.totalLogs || 0}`);
+            }
+        } else {
+            console.log('❌ Get project work statistics failed:', projectStatsResult.error);
+        }
+    }
+
+    // Test get specific work log
+    if (workLogId) {
+        console.log('\nTesting get specific work log:');
+        const workLogResult = await apiRequest('GET', `/worklogs/${workLogId}`, null, tokens.developer);
+        if (workLogResult.success) {
+            console.log('✅ Get specific work log successful');
+            console.log(`   Hours: ${workLogResult.data.workLog.hours_logged}`);
+            console.log(`   Type: ${workLogResult.data.workLog.log_type}`);
+        } else {
+            console.log('❌ Get specific work log failed:', workLogResult.error);
+        }
+
+        // Test update work log
+        console.log('\nTesting update work log:');
+        const updateLogResult = await apiRequest('PUT', `/worklogs/${workLogId}`, {
+            hours_logged: 4.0,
+            description: 'Updated: Implemented core functionality and added tests',
+            log_type: 'TESTING'
+        }, tokens.developer);
+        if (updateLogResult.success) {
+            console.log('✅ Update work log successful');
+        } else {
+            console.log('❌ Update work log failed:', updateLogResult.error);
+        }
+
+        // Test delete work log
+        console.log('\nTesting delete work log:');
+        const deleteLogResult = await apiRequest('DELETE', `/worklogs/${workLogId}`, null, tokens.developer);
+        if (deleteLogResult.success) {
+            console.log('✅ Delete work log successful');
+        } else {
+            console.log('❌ Delete work log failed:', deleteLogResult.error);
+        }
+    }
+}
+
+// Test estimate endpoints
+async function testEstimateEndpoints() {
+    console.log('\n📊 TESTING ESTIMATE ENDPOINTS (16/52)');
+    console.log('='.repeat(50));
+
+    if (!tokens.developer || !taskId) {
+        console.log('❌ No developer token or task ID available, skipping estimate tests');
+        return;
+    }
+
+    let estimateId = null;
+
+    // Test create estimate for task
+    console.log('\nTesting create estimate for task:');
+    const createEstimateResult = await apiRequest('POST', '/estimates', {
+        task_id: taskId,
+        estimated_hours: 16.0,
+        complexity: 'MEDIUM',
+        confidence_level: 4,
+        notes: 'Initial estimate based on requirements analysis'
+    }, tokens.developer);
+
+    if (createEstimateResult.success && createEstimateResult.data && createEstimateResult.data.estimate) {
+        estimateId = createEstimateResult.data.estimate.estimate_id;
+        console.log('✅ Create estimate for task successful');
+        console.log(`   Estimate ID: ${estimateId}`);
+        console.log(`   Estimated hours: ${createEstimateResult.data.estimate.estimated_hours}`);
+    } else {
+        console.log('❌ Create estimate for task failed:', createEstimateResult.error);
+    }
+
+    // Test create estimate for subtask
+    if (global.testSubtaskId) {
+        console.log('\nTesting create estimate for subtask:');
+        const createSubtaskEstimateResult = await apiRequest('POST', '/estimates', {
+            subtask_id: global.testSubtaskId,
+            estimated_hours: 6.0,
+            complexity: 'LOW',
+            confidence_level: 5,
+            notes: 'Subtask is well-defined and straightforward'
+        }, tokens.developer);
+
+        if (createSubtaskEstimateResult.success) {
+            console.log('✅ Create estimate for subtask successful');
+            console.log(`   Estimated hours: ${createSubtaskEstimateResult.data.estimate.estimated_hours}`);
+        } else {
+            console.log('❌ Create estimate for subtask failed:', createSubtaskEstimateResult.error);
+        }
+    }
+
+    // Test get user's estimates
+    console.log('\nTesting get user estimates:');
+    const userEstimatesResult = await apiRequest('GET', '/estimates/my', null, tokens.developer);
+    if (userEstimatesResult.success) {
+        const estimates = userEstimatesResult.data.estimates || [];
+        console.log(`✅ Get user estimates successful - Found ${estimates.length} estimates`);
+        if (estimates.length > 0) {
+            const totalHours = estimates.reduce((sum, est) => sum + parseFloat(est.estimated_hours || 0), 0);
+            console.log(`   Total estimated hours: ${totalHours.toFixed(1)}`);
+        }
+    } else {
+        console.log('❌ Get user estimates failed:', userEstimatesResult.error);
+    }
+
+    // Test get user's estimation accuracy
+    console.log('\nTesting get user estimation accuracy:');
+    const accuracyResult = await apiRequest('GET', '/estimates/my/accuracy', null, tokens.developer);
+    if (accuracyResult.success) {
+        console.log('✅ Get user estimation accuracy successful');
+        if (accuracyResult.data.accuracy) {
+            console.log(`   Average accuracy: ${accuracyResult.data.accuracy.averageAccuracy || 'N/A'}%`);
+            console.log(`   Total estimates: ${accuracyResult.data.accuracy.totalEstimates || 0}`);
+        }
+    } else {
+        console.log('❌ Get user estimation accuracy failed:', accuracyResult.error);
+    }
+
+    // Test get estimation trends
+    console.log('\nTesting get estimation trends:');
+    const trendsResult = await apiRequest('GET', '/estimates/trends', null, tokens.manager);
+    if (trendsResult.success) {
+        console.log('✅ Get estimation trends successful');
+        if (trendsResult.data.trends) {
+            console.log(`   Trend data points: ${trendsResult.data.trends.length || 0}`);
+        }
+    } else {
+        console.log('❌ Get estimation trends failed:', trendsResult.error);
+    }
+
+    // Test get task estimates
+    console.log('\nTesting get task estimates:');
+    const taskEstimatesResult = await apiRequest('GET', `/estimates/task/${taskId}`, null, tokens.manager);
+    if (taskEstimatesResult.success) {
+        const estimates = taskEstimatesResult.data.estimates || [];
+        console.log(`✅ Get task estimates successful - Found ${estimates.length} estimates`);
+    } else {
+        console.log('❌ Get task estimates failed:', taskEstimatesResult.error);
+    }
+
+    // Test get task estimation summary
+    console.log('\nTesting get task estimation summary:');
+    const taskSummaryResult = await apiRequest('GET', `/estimates/task/${taskId}/summary`, null, tokens.manager);
+    if (taskSummaryResult.success) {
+        console.log('✅ Get task estimation summary successful');
+        if (taskSummaryResult.data.summary) {
+            console.log(`   Total estimates: ${taskSummaryResult.data.summary.totalEstimates || 0}`);
+            console.log(`   Average estimate: ${taskSummaryResult.data.summary.averageEstimate || 'N/A'} hours`);
+        }
+    } else {
+        console.log('❌ Get task estimation summary failed:', taskSummaryResult.error);
+    }
+
+    // Test update task estimate (Manager/Admin only)
+    if (tokens.manager) {
+        console.log('\nTesting update task estimate (Manager):');
+        const updateTaskEstimateResult = await apiRequest('PUT', `/estimates/task/${taskId}/estimate`, {
+            actualHours: 18.5
+        }, tokens.manager);
+        if (updateTaskEstimateResult.success) {
+            console.log('✅ Update task estimate successful');
+            console.log(`   Actual hours set to: 18.5`);
+        } else {
+            console.log('❌ Update task estimate failed:', updateTaskEstimateResult.error);
+        }
+    }
+
+    // Test get subtask estimates
+    if (global.testSubtaskId) {
+        console.log('\nTesting get subtask estimates:');
+        const subtaskEstimatesResult = await apiRequest('GET', `/estimates/subtask/${global.testSubtaskId}`, null, tokens.manager);
+        if (subtaskEstimatesResult.success) {
+            const estimates = subtaskEstimatesResult.data.estimates || [];
+            console.log(`✅ Get subtask estimates successful - Found ${estimates.length} estimates`);
+        } else {
+            console.log('❌ Get subtask estimates failed:', subtaskEstimatesResult.error);
+        }
+
+        // Test get subtask estimation summary
+        console.log('\nTesting get subtask estimation summary:');
+        const subtaskSummaryResult = await apiRequest('GET', `/estimates/subtask/${global.testSubtaskId}/summary`, null, tokens.manager);
+        if (subtaskSummaryResult.success) {
+            console.log('✅ Get subtask estimation summary successful');
+        } else {
+            console.log('❌ Get subtask estimation summary failed:', subtaskSummaryResult.error);
+        }
+
+        // Test update subtask estimate (Manager/Admin only)
+        if (tokens.manager) {
+            console.log('\nTesting update subtask estimate (Manager):');
+            const updateSubtaskEstimateResult = await apiRequest('PUT', `/estimates/subtask/${global.testSubtaskId}/estimate`, {
+                actualHours: 7.0
+            }, tokens.manager);
+            if (updateSubtaskEstimateResult.success) {
+                console.log('✅ Update subtask estimate successful');
+                console.log(`   Actual hours set to: 7.0`);
+            } else {
+                console.log('❌ Update subtask estimate failed:', updateSubtaskEstimateResult.error);
+            }
+        }
+    }
+
+    // Test get project estimation statistics
+    if (projectId) {
+        console.log('\nTesting get project estimation statistics:');
+        const projectStatsResult = await apiRequest('GET', `/estimates/project/${projectId}/stats`, null, tokens.manager);
+        if (projectStatsResult.success) {
+            console.log('✅ Get project estimation statistics successful');
+            if (projectStatsResult.data.stats) {
+                console.log(`   Total estimates: ${projectStatsResult.data.stats.totalEstimates || 0}`);
+                console.log(`   Average accuracy: ${projectStatsResult.data.stats.averageAccuracy || 'N/A'}%`);
+            }
+        } else {
+            console.log('❌ Get project estimation statistics failed:', projectStatsResult.error);
+        }
+    }
+
+    // Test get estimator estimates
+    if (userProfiles.developer && userProfiles.developer.id) {
+        console.log('\nTesting get estimator estimates:');
+        const estimatorResult = await apiRequest('GET', `/estimates/estimator/${userProfiles.developer.id}`, null, tokens.manager);
+        if (estimatorResult.success) {
+            const estimates = estimatorResult.data.estimates || [];
+            console.log(`✅ Get estimator estimates successful - Found ${estimates.length} estimates`);
+        } else {
+            console.log('❌ Get estimator estimates failed:', estimatorResult.error);
+        }
+
+        // Test get estimation accuracy by estimator
+        console.log('\nTesting get estimation accuracy by estimator:');
+        const estimatorAccuracyResult = await apiRequest('GET', `/estimates/estimator/${userProfiles.developer.id}/accuracy`, null, tokens.manager);
+        if (estimatorAccuracyResult.success) {
+            console.log('✅ Get estimation accuracy by estimator successful');
+        } else {
+            console.log('❌ Get estimation accuracy by estimator failed:', estimatorAccuracyResult.error);
+        }
+    }
+
+    // Test get specific estimate
+    if (estimateId) {
+        console.log('\nTesting get specific estimate:');
+        const estimateResult = await apiRequest('GET', `/estimates/${estimateId}`, null, tokens.developer);
+        if (estimateResult.success) {
+            console.log('✅ Get specific estimate successful');
+            console.log(`   Hours: ${estimateResult.data.estimate.estimated_hours}`);
+            console.log(`   Complexity: ${estimateResult.data.estimate.complexity}`);
+        } else {
+            console.log('❌ Get specific estimate failed:', estimateResult.error);
+        }
+
+        // Test update estimate
+        console.log('\nTesting update estimate:');
+        const updateEstimateResult = await apiRequest('PUT', `/estimates/${estimateId}`, {
+            estimated_hours: 20.0,
+            complexity: 'HIGH',
+            confidence_level: 3,
+            notes: 'Updated estimate after further analysis - increased complexity'
+        }, tokens.developer);
+        if (updateEstimateResult.success) {
+            console.log('✅ Update estimate successful');
+        } else {
+            console.log('❌ Update estimate failed:', updateEstimateResult.error);
+        }
+
+        // Test delete estimate
+        console.log('\nTesting delete estimate:');
+        const deleteEstimateResult = await apiRequest('DELETE', `/estimates/${estimateId}`, null, tokens.developer);
+        if (deleteEstimateResult.success) {
+            console.log('✅ Delete estimate successful');
+        } else {
+            console.log('❌ Delete estimate failed:', deleteEstimateResult.error);
         }
     }
 }
@@ -1374,7 +1980,7 @@ async function testTeamEndpoints() {
 
 // Main test function
 async function runAllTests() {
-    console.log('🚀 STARTING COMPREHENSIVE API TESTING - ALL 66 ENDPOINTS');
+    console.log('🚀 STARTING COMPREHENSIVE API TESTING - ALL 102 ENDPOINTS');
     console.log('='.repeat(70));
     console.log(`Testing API at: ${BASE_URL}`);
     console.log(`Testing with users: Admin, Manager, Developer`);
@@ -1397,6 +2003,9 @@ async function runAllTests() {
         await testAdminEndpoints();
         await testProjectEndpoints();
         await testTaskEndpoints();
+        await testSubtaskEndpoints();        // NEW: 12 endpoints
+        await testWorkLogEndpoints();        // NEW: 12 endpoints  
+        await testEstimateEndpoints();       // NEW: 16 endpoints
         await testCalendarEndpoints();
         await testReportingEndpoints();
         await testFileEndpoints();
@@ -1407,10 +2016,13 @@ async function runAllTests() {
         console.log('='.repeat(70));
         console.log('Check the output above for any failed tests (❌)');
         console.log('All successful tests are marked with (✅)');
-        console.log(`\n📊 COVERAGE: Testing all 66 API endpoints across 9 modules`);
+        console.log(`\n📊 COVERAGE: Testing all 102 API endpoints across 12 modules`);
         console.log('📷 INCLUDES: Profile photo upload/update/delete with real test images');
         console.log('📁 INCLUDES: Project file upload/download/delete with real documents');
         console.log('👥 INCLUDES: Comprehensive team management with member and project assignments');
+        console.log('🔄 INCLUDES: Complete subtask lifecycle with assignments and estimates');
+        console.log('⏱️ INCLUDES: Work hour logging with bulk operations and statistics');
+        console.log('📊 INCLUDES: Estimation system with accuracy tracking and trends analysis');
 
         if (isInfoMode) {
             console.log('\n📋 INFO MODE: Detailed logging was enabled for this run');

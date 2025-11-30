@@ -42,6 +42,25 @@ class Task {
         assignments:task_assignments(
           assignment_id,
           developer:profiles!task_assignments_developer_id_fkey(user_id, username, email)
+        ),
+        estimator:profiles!tasks_estimated_by_fkey(user_id, username, email),
+        subtasks(
+          subtask_id,
+          title,
+          status,
+          estimated_hours,
+          actual_hours,
+          assignments:subtask_assignments(
+            assignee:profiles!subtask_assignments_assignee_id_fkey(user_id, username, email)
+          )
+        ),
+        work_logs(
+          log_id,
+          hours_logged,
+          work_date,
+          log_type,
+          description,
+          user:profiles!work_logs_user_id_fkey(user_id, username, email)
         )
       `)
       .eq('task_id', task_id)
@@ -175,6 +194,117 @@ class Task {
     }
 
     return true;
+  }
+
+  /**
+   * Add estimate to task
+   */
+  static async addEstimate(taskId, estimatedHours, estimatorId, notes = null, estimateType = 'INITIAL') {
+    // Create estimate record
+    const { data: estimate, error: estimateError } = await supabase
+      .from('task_estimates')
+      .insert({
+        task_id: taskId,
+        estimated_hours: estimatedHours,
+        estimator_id: estimatorId,
+        estimate_type: estimateType,
+        notes: notes
+      })
+      .select()
+      .single();
+
+    if (estimateError) throw estimateError;
+
+    // Update task with latest estimate
+    const { data: task, error: updateError } = await supabase
+      .from('tasks')
+      .update({
+        estimated_hours: estimatedHours,
+        estimated_by: estimatorId,
+        estimated_at: new Date().toISOString()
+      })
+      .eq('task_id', taskId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    return { estimate, task };
+  }
+
+  /**
+   * Get task estimates history
+   */
+  static async getEstimates(taskId) {
+    const { data, error } = await supabase
+      .from('task_estimates')
+      .select(`
+        *,
+        estimator:profiles!task_estimates_estimator_id_fkey(user_id, username, email, role)
+      `)
+      .eq('task_id', taskId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get task statistics including subtasks and work logs
+   */
+  static async getTaskStats(taskId) {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select(`
+        *,
+        subtasks(
+          subtask_id,
+          title,
+          status,
+          estimated_hours,
+          actual_hours
+        ),
+        work_logs(
+          hours_logged,
+          log_type
+        ),
+        assignments:task_assignments(
+          assignee:profiles!task_assignments_developer_id_fkey(user_id, username, email)
+        )
+      `)
+      .eq('task_id', taskId)
+      .single();
+
+    if (error) throw error;
+
+    const stats = {
+      taskId,
+      title: data.title,
+      status: data.status,
+      estimatedHours: data.estimated_hours || 0,
+      actualHours: data.actual_hours || 0,
+      subtasksCount: data.subtasks.length,
+      subtasksCompleted: data.subtasks.filter(s => s.status === 'COMPLETED').length,
+      assigneesCount: data.assignments.length,
+      totalSubtaskEstimated: data.subtasks.reduce((sum, s) => sum + (s.estimated_hours || 0), 0),
+      totalSubtaskActual: data.subtasks.reduce((sum, s) => sum + (s.actual_hours || 0), 0),
+      workLogsByType: data.work_logs.reduce((acc, log) => {
+        acc[log.log_type] = (acc[log.log_type] || 0) + parseFloat(log.hours_logged);
+        return acc;
+      }, {})
+    };
+
+    // Calculate progress
+    if (stats.estimatedHours > 0) {
+      stats.progressPercentage = Math.round((stats.actualHours / stats.estimatedHours) * 100);
+    } else {
+      stats.progressPercentage = 0;
+    }
+
+    // Calculate remaining hours
+    stats.remainingHours = Math.max(stats.estimatedHours - stats.actualHours, 0);
+
+    return stats;
   }
 }
 
