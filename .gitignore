@@ -42,7 +42,3 @@ logs/
 # Misc
 *.tsbuildinfo
 .vercel
-
-# Development-only Files (keep local)
-verify-users.js
-create-test-users.sql
