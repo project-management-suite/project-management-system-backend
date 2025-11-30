@@ -73,9 +73,6 @@ app.use('/api/calendar', calendarRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Serve uploaded files
-app.use('/uploads', express.static('uploads'));
-
 app.get('/', (req, res) => {
   res.send(homepageHTML);
 });

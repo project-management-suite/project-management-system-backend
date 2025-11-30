@@ -1,28 +1,10 @@
 // src/controllers/profile.controller.js
 const { supabase } = require('../config/supabase');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs').promises;
 const crypto = require('crypto');
 
-// Configure multer for profile photo uploads
-const storage = multer.diskStorage({
-    destination: async (req, file, cb) => {
-        const uploadDir = path.join(__dirname, '../../uploads/profile-photos');
-        try {
-            await fs.mkdir(uploadDir, { recursive: true });
-            cb(null, uploadDir);
-        } catch (error) {
-            cb(error);
-        }
-    },
-    filename: (req, file, cb) => {
-        // Generate unique filename: userId_timestamp_random.ext
-        const uniqueSuffix = Date.now() + '_' + crypto.randomUUID().slice(0, 8);
-        const extension = path.extname(file.originalname);
-        cb(null, `${req.user.user_id}_${uniqueSuffix}${extension}`);
-    }
-});
+// Configure multer for memory storage (we'll upload to Supabase)
+const storage = multer.memoryStorage();
 
 // File filter for profile photos
 const fileFilter = (req, file, cb) => {
@@ -112,15 +94,37 @@ exports.uploadProfilePhoto = async (req, res) => {
         const userId = req.user.user_id;
         const file = req.file;
 
-        // Create public URL (you'll need to serve static files or use cloud storage)
-        const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-        const photoUrl = `${baseUrl}/uploads/profile-photos/${file.filename}`;
+        // Generate unique filename for Supabase Storage
+        const uniqueSuffix = Date.now() + '_' + crypto.randomUUID().slice(0, 8);
+        const fileExtension = file.originalname.split('.').pop();
+        const fileName = `${userId}_${uniqueSuffix}.${fileExtension}`;
+        const filePath = `profile-photos/${fileName}`;
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('uploads')
+            .upload(filePath, file.buffer, {
+                contentType: file.mimetype,
+                upsert: false
+            });
+
+        if (uploadError) {
+            console.error('Supabase upload error:', uploadError);
+            throw new Error('Failed to upload file to storage');
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+            .from('uploads')
+            .getPublicUrl(filePath);
+
+        const photoUrl = urlData.publicUrl;
 
         // Update database using the stored function
         const { data, error } = await supabase.rpc('update_user_profile_photo', {
             p_user_id: userId,
             p_file_name: file.originalname,
-            p_file_path: file.path,
+            p_file_path: filePath,
             p_file_url: photoUrl,
             p_file_size: file.size,
             p_mime_type: file.mimetype
@@ -149,15 +153,6 @@ exports.uploadProfilePhoto = async (req, res) => {
         });
 
     } catch (error) {
-        // Clean up uploaded file if database operation failed
-        if (req.file && req.file.path) {
-            try {
-                await fs.unlink(req.file.path);
-            } catch (unlinkError) {
-                console.error('Failed to delete uploaded file:', unlinkError);
-            }
-        }
-
         console.error('Upload profile photo error:', error);
 
         if (error.message.includes('Invalid file type')) {
@@ -178,33 +173,57 @@ exports.updateProfilePhoto = async (req, res) => {
         }
 
         const userId = req.user.user_id;
+        const file = req.file;
 
-        // Get current photo info to delete old file
+        // Get current photo info to delete old file from Supabase Storage
         const { data: currentProfile } = await supabase
             .from('profiles')
             .select('profile_photo_path')
             .eq('user_id', userId)
             .single();
 
-        // Delete old photo file if exists
+        // Delete old photo file from Supabase Storage if exists
         if (currentProfile && currentProfile.profile_photo_path) {
-            try {
-                await fs.unlink(currentProfile.profile_photo_path);
-            } catch (deleteError) {
-                console.error('Failed to delete old photo file:', deleteError);
+            const { error: deleteError } = await supabase.storage
+                .from('uploads')
+                .remove([currentProfile.profile_photo_path]);
+
+            if (deleteError) {
+                console.error('Failed to delete old photo from storage:', deleteError);
                 // Continue with upload even if old file deletion fails
             }
         }
 
-        // Upload new photo (same logic as upload)
-        const file = req.file;
-        const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-        const photoUrl = `${baseUrl}/uploads/profile-photos/${file.filename}`;
+        // Upload new photo
+        const uniqueSuffix = Date.now() + '_' + crypto.randomUUID().slice(0, 8);
+        const fileExtension = file.originalname.split('.').pop();
+        const fileName = `${userId}_${uniqueSuffix}.${fileExtension}`;
+        const filePath = `profile-photos/${fileName}`;
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('uploads')
+            .upload(filePath, file.buffer, {
+                contentType: file.mimetype,
+                upsert: false
+            });
+
+        if (uploadError) {
+            console.error('Supabase upload error:', uploadError);
+            throw new Error('Failed to upload file to storage');
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+            .from('uploads')
+            .getPublicUrl(filePath);
+
+        const photoUrl = urlData.publicUrl;
 
         const { data, error } = await supabase.rpc('update_user_profile_photo', {
             p_user_id: userId,
             p_file_name: file.originalname,
-            p_file_path: file.path,
+            p_file_path: filePath,
             p_file_url: photoUrl,
             p_file_size: file.size,
             p_mime_type: file.mimetype
@@ -228,15 +247,6 @@ exports.updateProfilePhoto = async (req, res) => {
         });
 
     } catch (error) {
-        // Clean up uploaded file if operation failed
-        if (req.file && req.file.path) {
-            try {
-                await fs.unlink(req.file.path);
-            } catch (unlinkError) {
-                console.error('Failed to delete uploaded file:', unlinkError);
-            }
-        }
-
         console.error('Update profile photo error:', error);
         res.status(500).json({ error: 'Failed to update profile photo' });
     }
@@ -267,11 +277,13 @@ exports.removeProfilePhoto = async (req, res) => {
 
         if (error) throw error;
 
-        // Delete file from filesystem
-        try {
-            await fs.unlink(profile.profile_photo_path);
-        } catch (deleteError) {
-            console.error('Failed to delete photo file:', deleteError);
+        // Delete file from Supabase Storage
+        const { error: deleteError } = await supabase.storage
+            .from('uploads')
+            .remove([profile.profile_photo_path]);
+
+        if (deleteError) {
+            console.error('Failed to delete photo from storage:', deleteError);
             // Continue even if file deletion fails - database is already updated
         }
 
