@@ -7,46 +7,11 @@ const crypto = require('crypto');
 // Configure multer for memory storage (we'll upload to Supabase)
 const storage = multer.memoryStorage();
 
-// File filter for project files
+// File filter for project files - Accept all file types
 const fileFilter = (req, file, cb) => {
-  // Accept various document and media types
-  const allowedMimeTypes = [
-    // Documents
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'text/plain',
-    'text/csv',
-    // Images
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'image/svg+xml',
-    // Archives
-    'application/zip',
-    'application/x-rar-compressed',
-    'application/x-7z-compressed',
-    // Code files
-    'application/json',
-    'application/javascript',
-    'text/html',
-    'text/css',
-    // Other
-    'application/xml',
-    'text/xml'
-  ];
-
-  if (allowedMimeTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: documents, images, archives, and code files.`), false);
-  }
+  // Accept ALL file types - no restrictions
+  // This allows maximum flexibility for project file uploads
+  cb(null, true);
 };
 
 // Configure multer

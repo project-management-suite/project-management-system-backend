@@ -6,6 +6,8 @@
     "test": "node test/test-api.js",
     "test:info": "node test/test-api.js --info",
     "test:help": "node test/test-api.js --help",
+    "seed": "node test/seed-data.js --create-users --verbose",
+    "deseed": "node test/deseed-data.js",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },

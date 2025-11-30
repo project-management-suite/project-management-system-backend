@@ -58,6 +58,47 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
+exports.deleteUserByEmail = async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    // Only allow in development/test environments for safety
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({
+        message: 'User deletion by email not allowed in production'
+      });
+    }
+
+    console.log(`🗑️ Attempting to delete user with email: ${email}`);
+
+    // First, get the user by email from profiles
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('user_id')
+      .eq('email', email)
+      .single();
+
+    if (profileError || !profile) {
+      console.log(`ℹ️ User not found with email: ${email}`);
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Delete from Supabase Auth (this will cascade to profiles table)
+    const { error: authError } = await supabase.auth.admin.deleteUser(profile.user_id);
+
+    if (authError) {
+      console.error('Supabase auth delete error:', authError);
+      throw authError;
+    }
+
+    console.log(`✅ Successfully deleted user: ${email}`);
+    res.json({ message: 'User deleted successfully', email: email });
+  } catch (error) {
+    console.error('Delete user by email error:', error);
+    res.status(500).json({ message: 'Failed to delete user', error: error.message });
+  }
+};
+
 exports.getDashboardStats = async (req, res) => {
   try {
     // Get user counts by role
@@ -113,5 +154,53 @@ exports.getDashboardStats = async (req, res) => {
   } catch (error) {
     console.error('Get dashboard stats error:', error);
     res.status(500).json({ message: 'Failed to fetch dashboard stats', error: error.message });
+  }
+};
+
+exports.cleanupPendingData = async (req, res) => {
+  try {
+    // Only allow in development/test environments
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({
+        message: 'Database cleanup not allowed in production'
+      });
+    }
+
+    console.log('🧹 Starting database cleanup...');
+
+    // Clean up ALL pending registrations (for testing cleanup)
+    const { data: pendingRegs, error: pendingError } = await supabase
+      .from('pending_registrations')
+      .delete()
+      .not('email', 'eq', '')  // Delete all records
+      .select();
+
+    if (pendingError) {
+      console.warn('Error cleaning pending registrations:', pendingError);
+    } else {
+      console.log(`✅ Removed ${pendingRegs?.length || 0} pending registrations`);
+    }
+
+    // Clean up ALL OTPs (for testing cleanup)
+    const { data: allOTPs, error: allOTPError } = await supabase
+      .from('email_otps')
+      .delete()
+      .not('email', 'eq', '')  // Delete all records
+      .select();
+
+    if (allOTPError) {
+      console.warn('Error cleaning all OTPs:', allOTPError);
+    } else {
+      console.log(`✅ Removed ${allOTPs?.length || 0} OTPs`);
+    }
+
+    res.json({
+      message: 'Database cleanup completed',
+      pending_registrations: pendingRegs?.length || 0,
+      all_otps: allOTPs?.length || 0
+    });
+  } catch (error) {
+    console.error('Database cleanup error:', error);
+    res.status(500).json({ message: 'Failed to cleanup database', error: error.message });
   }
 };

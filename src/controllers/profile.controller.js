@@ -340,11 +340,92 @@ exports.cleanupOldPhotos = async (req, res) => {
 
         res.json({
             success: true,
-            message: `Cleaned up ${deletedCount || 0} old profile photos`
+            message: `Cleaned up ${deletedCount || 0} old profile photos`,
+            removed: deletedCount || 0
         });
 
     } catch (error) {
         console.error('Cleanup old photos error:', error);
         res.status(500).json({ error: 'Failed to cleanup old photos' });
+    }
+};
+
+/**
+ * Admin function to cleanup sample profile photos from storage (for testing)
+ */
+exports.cleanupSamplePhotos = async (req, res) => {
+    try {
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+
+        // Only allow in development/test environments
+        if (process.env.NODE_ENV === 'production') {
+            return res.status(403).json({ error: 'Sample photo cleanup not allowed in production' });
+        }
+
+        console.log('🧹 Starting sample profile photos cleanup...');
+
+        // Get all files in profile-photos folder
+        const { data: files, error: listError } = await supabase.storage
+            .from('uploads')
+            .list('profile-photos', {
+                limit: 1000,
+                sortBy: { column: 'name', order: 'asc' }
+            });
+
+        if (listError) {
+            console.error('Error listing profile photos:', listError);
+            throw listError;
+        }
+
+        console.log(`📁 Found ${files?.length || 0} files in profile-photos folder`);
+
+        if (!files || files.length === 0) {
+            return res.json({
+                success: true,
+                message: 'No sample profile photos found to delete',
+                removed: 0
+            });
+        }
+
+        // Delete all files from storage
+        const filesToDelete = files.map(file => `profile-photos/${file.name}`);
+
+        console.log(`🗑️ Deleting ${filesToDelete.length} profile photos from storage...`);
+
+        const { data: deletedFiles, error: deleteError } = await supabase.storage
+            .from('uploads')
+            .remove(filesToDelete);
+
+        if (deleteError) {
+            console.error('Error deleting profile photos:', deleteError);
+            throw deleteError;
+        }
+
+        // Also clear profile_photo_url from all users
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+                profile_photo_url: null,
+                profile_photo_uploaded_at: null
+            })
+            .not('profile_photo_url', 'is', null);
+
+        if (updateError) {
+            console.warn('Warning: Failed to clear profile photo URLs from database:', updateError);
+        }
+
+        console.log(`✅ Successfully deleted ${deletedFiles?.length || 0} profile photos`);
+
+        res.json({
+            success: true,
+            message: `Cleaned up ${deletedFiles?.length || 0} sample profile photos from storage`,
+            removed: deletedFiles?.length || 0
+        });
+
+    } catch (error) {
+        console.error('Cleanup sample photos error:', error);
+        res.status(500).json({ error: 'Failed to cleanup sample photos', details: error.message });
     }
 };

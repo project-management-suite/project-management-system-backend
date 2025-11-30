@@ -246,4 +246,35 @@ router.post('/admin/cleanup-photos',
     profileController.cleanupOldPhotos
 );
 
+/**
+ * @openapi
+ * /api/profile/admin/cleanup-sample-photos:
+ *   post:
+ *     tags: [Profile - Testing]
+ *     summary: Cleanup ALL sample profile photos from storage (Admin only, Development/Test only)
+ *     description: Removes all profile photos from Supabase storage and clears database references. Only available in non-production environments.
+ *     responses:
+ *       200:
+ *         description: Sample photos cleanup completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 removed:
+ *                   type: integer
+ *       403:
+ *         description: Admin access required or not available in production
+ *       500:
+ *         description: Cleanup failed
+ */
+router.post('/admin/cleanup-sample-photos',
+    authorizeRoles('ADMIN'),
+    profileController.cleanupSamplePhotos
+);
+
 module.exports = router;

@@ -67,22 +67,33 @@ exports.register = async (req, res) => {
 
     // Send OTP email
     try {
-      // Development mode: Log OTP to console if email fails
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🔐 OTP for ${email}: ${otp} (Development Mode)`);
-        console.log(`⏰ OTP expires in 10 minutes`);
+      // Development/Testing mode: Enhanced OTP logging
+      if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+        console.log('\n' + '='.repeat(60));
+        console.log('🧪 TESTING MODE - OTP GENERATED');
+        console.log('='.repeat(60));
+        console.log(`📧 Email: ${email}`);
+        console.log(`🔑 OTP: ${otp}`);
+        console.log(`⏰ Expires: ${new Date(Date.now() + 10 * 60 * 1000).toLocaleString()}`);
+        console.log(`🔄 Use this OTP to verify: POST /api/auth/verify-otp`);
+        console.log('='.repeat(60) + '\n');
+
+        // Store OTP in a way the seed script can access it (for testing only)
+        global.lastGeneratedOTP = { email, otp, timestamp: Date.now() };
+
         try {
           await sendOTPEmail(email, otp, username);
           console.log(`✅ OTP email sent successfully to ${email}`);
         } catch (emailError) {
-          console.warn(`⚠️  Email failed, but OTP is logged above for development:`, emailError.message);
+          console.warn(`⚠️  Email service failed, but OTP is available above for testing:`, emailError.message);
+          console.warn(`   Use OTP: ${otp} for email: ${email}`);
         }
       } else {
         await sendOTPEmail(email, otp, username);
       }
     } catch (emailError) {
       console.error('Failed to send OTP email:', emailError);
-      if (process.env.NODE_ENV !== 'development') {
+      if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
         return res.status(500).json({ message: 'Failed to send verification email' });
       }
     }
@@ -322,5 +333,105 @@ exports.login = async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Login failed', error: error.message });
+  }
+};
+
+/**
+ * @swagger
+ * /api/auth/test/last-otp:
+ *   get:
+ *     summary: Get last generated OTP (Testing/Development only)
+ *     description: Returns the last generated OTP for testing purposes. Only available in development/test environments.
+ *     tags: [Authentication - Testing]
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Email address to get OTP for
+ *     responses:
+ *       200:
+ *         description: Last generated OTP
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 email:
+ *                   type: string
+ *                 otp:
+ *                   type: string
+ *                 generated_at:
+ *                   type: string
+ *                 expires_at:
+ *                   type: string
+ *       400:
+ *         description: No OTP found or invalid email
+ *       403:
+ *         description: Not available in production
+ */
+exports.getLastOTPForTesting = async (req, res) => {
+  // Only allow in development/test environments
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({
+      message: 'OTP testing endpoint not available in production'
+    });
+  }
+
+  const { email } = req.query;
+
+  if (!email) {
+    return res.status(400).json({ message: 'Email parameter required' });
+  }
+
+  try {
+    // Check if we have a recent OTP for this email
+    if (global.lastGeneratedOTP && global.lastGeneratedOTP.email === email) {
+      const otpData = global.lastGeneratedOTP;
+      const generatedAt = new Date(otpData.timestamp);
+      const expiresAt = new Date(otpData.timestamp + 10 * 60 * 1000); // 10 minutes
+
+      // Check if OTP is still valid
+      if (Date.now() > otpData.timestamp + 10 * 60 * 1000) {
+        return res.status(400).json({
+          message: 'Last OTP has expired',
+          email: email,
+          expired_at: expiresAt.toISOString()
+        });
+      }
+
+      return res.json({
+        email: email,
+        otp: otpData.otp,
+        generated_at: generatedAt.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        valid_for_seconds: Math.floor((expiresAt.getTime() - Date.now()) / 1000)
+      });
+    }
+
+    // Also try to get from database as fallback
+    const storedOTP = await OTPModel.getOTP(email);
+    if (storedOTP) {
+      return res.json({
+        email: email,
+        otp: storedOTP.otp,
+        generated_at: storedOTP.created_at,
+        expires_at: storedOTP.expires_at,
+        note: 'Retrieved from database'
+      });
+    }
+
+    res.status(400).json({
+      message: 'No OTP found for this email',
+      email: email,
+      suggestion: 'Register the user first to generate an OTP'
+    });
+  } catch (error) {
+    console.error('Get OTP testing error:', error);
+    res.status(500).json({
+      message: 'Failed to retrieve OTP',
+      error: error.message
+    });
   }
 };

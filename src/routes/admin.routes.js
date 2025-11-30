@@ -7,7 +7,9 @@ const {
   getUsers,
   updateUserRole,
   deleteUser,
-  getDashboardStats
+  deleteUserByEmail,
+  getDashboardStats,
+  cleanupPendingData
 } = require('../controllers/admin.controller');
 
 router.use(authenticate);
@@ -126,5 +128,57 @@ router.patch('/users/:userId/role', updateUserRole);
  *         description: User not found
  */
 router.delete('/users/:userId', deleteUser);
+
+/**
+ * @openapi
+ * /api/admin/users/by-email/{email}:
+ *   delete:
+ *     tags: [Admin - Testing]
+ *     summary: Delete user by email (Development/Test only)
+ *     description: Delete user account by email address. Only available in non-production environments for testing purposes.
+ *     parameters:
+ *       - in: path
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: email
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *       403:
+ *         description: Not available in production or forbidden
+ *       404:
+ *         description: User not found
+ */
+router.delete('/users/by-email/:email', deleteUserByEmail);
+
+/**
+ * @openapi
+ * /api/admin/cleanup-pending-data:
+ *   post:
+ *     tags: [Admin - Testing]
+ *     summary: Cleanup pending registrations and OTPs (Development/Test only)
+ *     description: Removes all pending registrations and OTPs from database. Only available in non-production environments.
+ *     responses:
+ *       200:
+ *         description: Cleanup completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 expired_otps:
+ *                   type: integer
+ *                 pending_registrations:
+ *                   type: integer
+ *                 all_otps:
+ *                   type: integer
+ *       403:
+ *         description: Not available in production or forbidden
+ */
+router.post('/cleanup-pending-data', cleanupPendingData);
 
 module.exports = router;

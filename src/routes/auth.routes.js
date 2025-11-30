@@ -1,6 +1,6 @@
 // src/routes/auth.routes.js
 const router = require('express').Router();
-const { register, login, verifyOTP, resendOTP } = require('../controllers/auth.controller');
+const { register, login, verifyOTP, resendOTP, getLastOTPForTesting } = require('../controllers/auth.controller');
 
 /**
  * @openapi
@@ -127,5 +127,45 @@ router.post('/resend-otp', resendOTP);
  *             schema: { $ref: '#/components/schemas/Error' }
  */
 router.post('/login', login);
+
+/**
+ * @openapi
+ * /api/auth/test/last-otp:
+ *   get:
+ *     tags: [Auth - Testing]
+ *     summary: Get last generated OTP (Development/Test only)
+ *     description: Retrieves the last generated OTP for testing purposes. Only available in non-production environments.
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: email
+ *         description: Email address to get OTP for
+ *     responses:
+ *       200:
+ *         description: Last generated OTP
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 email:
+ *                   type: string
+ *                 otp:
+ *                   type: string
+ *                 generated_at:
+ *                   type: string
+ *                 expires_at:
+ *                   type: string
+ *                 valid_for_seconds:
+ *                   type: integer
+ *       400:
+ *         description: No OTP found or expired
+ *       403:
+ *         description: Not available in production
+ */
+router.get('/test/last-otp', getLastOTPForTesting);
 
 module.exports = router;
