@@ -95,7 +95,7 @@ const homepageHTML = `
                 <a href="https://project-management-system-fsad.netlify.app" class="btn">
                     🌟 Visit Frontend
                 </a>
-                <a href="/api-docs" class="btn">
+                <a href="/api/docs" class="btn">
                     📚 API Documentation
                 </a>
                 <a href="/api/health" class="btn">

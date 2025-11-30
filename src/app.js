@@ -31,12 +31,32 @@ app.use((req, res, next) => {
 });
 
 // API Documentation - Custom implementation for Vercel compatibility
-app.get('/api-docs', (req, res) => {
+app.get('/api/docs', (req, res) => {
   res.send(apiDocsHTML);
 });
 
+// Custom HTML Documentation alternative route
+app.get('/docs', (req, res) => {
+  res.send(apiDocsHTML);
+});
+
+// Real Swagger UI 
+app.use('/api/swagger',
+  (req, res, next) => {
+    // Optional: skip auth if a global auth middleware exists later
+    req.skipAuth = true;
+    next();
+  },
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    explorer: true,
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Project Management API - Swagger UI'
+  })
+);
+
 // Serve swagger JSON separately  
-app.get('/api-docs/swagger.json', (req, res) => {
+app.get('/api/docs/swagger.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
