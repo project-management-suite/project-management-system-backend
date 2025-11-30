@@ -114,6 +114,17 @@ class User {
 
     return true;
   }
+
+  static async updatePassword(userId, newPassword) {
+    // Update password in Supabase Auth
+    const { data, error } = await supabase.auth.admin.updateUserById(userId, {
+      password: newPassword
+    });
+
+    if (error) throw error;
+
+    return data;
+  }
 }
 
 module.exports = User;

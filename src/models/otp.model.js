@@ -3,14 +3,15 @@ const { supabase } = require('../config/supabase');
 
 class OTPModel {
     // Store OTP for verification
-    static async storeOTP(email, otp) {
+    static async storeOTP(email, otp, type = 'REGISTRATION') {
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
-        // First, delete any existing OTP for this email
+        // First, delete any existing OTP for this email and type
         await supabase
             .from('email_otps')
             .delete()
-            .eq('email', email);
+            .eq('email', email)
+            .eq('type', type);
 
         // Insert new OTP
         const { data, error } = await supabase
@@ -18,6 +19,7 @@ class OTPModel {
             .insert([{
                 email,
                 otp,
+                type,
                 expires_at: expiresAt.toISOString(),
                 used: false,
                 created_at: new Date().toISOString()
@@ -27,6 +29,11 @@ class OTPModel {
 
         if (error) throw error;
         return data;
+    }
+
+    // Store password reset OTP
+    static async storePasswordResetOTP(email, otp) {
+        return this.storeOTP(email, otp, 'PASSWORD_RESET');
     }
 
     // Store pending user data
@@ -94,12 +101,13 @@ class OTPModel {
     }
 
     // Verify OTP
-    static async verifyOTP(email, otp) {
+    static async verifyOTP(email, otp, type = 'REGISTRATION') {
         const { data, error } = await supabase
             .from('email_otps')
             .select('*')
             .eq('email', email)
             .eq('otp', otp)
+            .eq('type', type)
             .eq('used', false)
             .single();
 
@@ -120,9 +128,27 @@ class OTPModel {
             .from('email_otps')
             .update({ used: true })
             .eq('email', email)
-            .eq('otp', otp);
+            .eq('otp', otp)
+            .eq('type', type);
 
         return { valid: true, message: 'OTP verified successfully' };
+    }
+
+    // Verify password reset OTP
+    static async verifyPasswordResetOTP(email, otp) {
+        return this.verifyOTP(email, otp, 'PASSWORD_RESET');
+    }
+
+    // Mark password reset OTP as used (for security)
+    static async markPasswordResetOTPAsUsed(email, otp) {
+        const { error } = await supabase
+            .from('email_otps')
+            .update({ used: true })
+            .eq('email', email)
+            .eq('otp', otp)
+            .eq('type', 'PASSWORD_RESET');
+
+        if (error) throw error;
     }
 
     // Clean up expired OTPs (for cleanup jobs)
