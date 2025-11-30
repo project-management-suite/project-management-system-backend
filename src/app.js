@@ -11,6 +11,7 @@ const projectRoutes = require('./routes/project.routes');
 const taskRoutes = require('./routes/task.routes');
 const fileRoutes = require('./routes/file.routes');
 const reportRoutes = require('./routes/report.routes');
+const calendarRoutes = require('./routes/calendar.routes');
 const adminRoutes = require('./routes/admin.routes');
 const { errorHandler } = require('./middlewares/error.middleware');
 const { startScheduledJobs } = require('./utils/scheduler');
@@ -61,13 +62,13 @@ app.get('/api/docs/swagger.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
-// REMOVE debug type logs now that routes fixed
-// app.use('/api/auth', authRoutes);
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/calendar', calendarRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
