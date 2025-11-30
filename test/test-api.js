@@ -7,8 +7,55 @@ const path = require('path');
 // Base URL for your API
 const BASE_URL = 'http://localhost:5000/api';
 
-// Check for --info flag
+// Check for command line flags
 const isInfoMode = process.argv.includes('--info');
+const isHelpMode = process.argv.includes('--help') || process.argv.includes('-h');
+
+// Show help message and exit
+if (isHelpMode) {
+    console.log(`
+🚀 PROJECT MANAGEMENT API TEST SUITE
+=====================================
+
+USAGE:
+  node test/test-api.js [OPTIONS]
+  npm test [-- OPTIONS]
+  npm run test:info
+  npm run test:verbose
+
+OPTIONS:
+  --info, --verbose    Enable detailed request/response logging
+  --help, -h          Show this help message
+
+EXAMPLES:
+  node test/test-api.js                 # Basic testing
+  node test/test-api.js --info          # Verbose testing
+  npm test                              # Basic testing via npm
+  npm run test:info                     # Verbose testing via npm
+
+DESCRIPTION:
+  Comprehensive test suite for all 50 API endpoints across 8 modules:
+  
+  🔐 Authentication (4 endpoints)      - Login, registration, OTP verification
+  👤 Profile Management (7 endpoints)  - Profile CRUD, photo upload/management
+  👑 Admin Functions (4 endpoints)     - Dashboard, user management, roles
+  📋 Project Management (8 endpoints)  - Project CRUD, assignments, dashboard
+  ✅ Task Management (8 endpoints)     - Task CRUD, assignments, status updates
+  📅 Calendar System (8 endpoints)     - Holidays, deadlines, reminders
+  📊 Reporting (5 endpoints)           - Analytics, reports, PDF export
+  📁 File Management (6 endpoints)     - File upload, download, management
+
+REQUIREMENTS:
+  - Backend server running on http://localhost:5000
+  - Test users: testadmin@testapp.com, testmanager@testapp.com, testdeveloper@testapp.com
+  - Supabase Storage configured with 'uploads' bucket
+
+OUTPUT MODES:
+  Standard: Shows request URLs, response status, basic errors
+  Verbose:  Adds request/response data, headers, detailed error info
+`);
+    process.exit(0);
+}
 
 // Helper function for info logging
 function logInfo(...args) {
