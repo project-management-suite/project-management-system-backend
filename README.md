@@ -52,54 +52,63 @@
 ## ✨ Comprehensive Features (109 Endpoints)
 
 ### 🔐 **Authentication & Security**
+
 - JWT authentication with email OTP verification
 - Role-based access control (ADMIN/MANAGER/DEVELOPER)
 - Password reset and account management
 - Session management and token refresh
 
 ### 📋 **Advanced Project Management**
+
 - Complete project lifecycle management
 - Team assignment and collaboration tools
 - Project analytics and progress tracking
 - Resource allocation and planning
 
 ### ✅ **Comprehensive Task System**
+
 - Task creation with subtask support
 - Advanced status tracking and workflows
 - Time estimation and actual tracking
 - Bulk operations and task dependencies
 
 ### 📊 **Work Logging & Analytics**
+
 - Detailed time tracking and work logs
 - Performance analytics and reporting
 - Team productivity metrics
 - Custom dashboard views
 
 ### 👥 **Team Management**
+
 - Team creation and member management
 - Performance statistics and reviews
 - Workload balancing and assignments
 - Skill tracking and development
 
 ### 📁 **File & Document Management**
+
 - Secure file upload and storage
 - Version control and file history
 - Document sharing and permissions
 - Profile photo management
 
 ### 📅 **Calendar & Scheduling**
+
 - Holiday management system
 - Task scheduling and deadlines
 - Meeting coordination
 - Availability tracking
 
 ### 📈 **Advanced Analytics & Reporting**
+
 - Real-time dashboard metrics
 - Custom report generation
 - Performance trend analysis
 - Export capabilities (PDF, Excel)
 
 ### 📚 **API Documentation**
+
 - Interactive Swagger UI with live testing
 - Comprehensive endpoint documentation
 - Real working examples and test data
@@ -186,77 +195,77 @@ pending_registrations (id, email, user_data, created_at)
 
 ### 🎯 **12 Functional Modules Overview**
 
-| **Module** | **Endpoints** | **Features** | **Status** |
-|------------|--------------|-------------|------------|
-| **🔐 Authentication** | 9 endpoints | JWT auth, OTP verification, password reset | ✅ Complete |
-| **📋 Projects** | 12 endpoints | CRUD, team management, analytics | ✅ Complete |
-| **✅ Tasks** | 14 endpoints | Task management, assignments, dependencies | ✅ Complete |
-| **🔧 Subtasks** | 8 endpoints | Subtask creation, tracking, completion | ✅ Complete |
-| **⏰ Work Logs** | 12 endpoints | Time tracking, bulk operations, statistics | ✅ Complete |
-| **📊 Estimates** | 9 endpoints | Task estimation, accuracy tracking | ✅ Complete |
-| **👥 Teams** | 10 endpoints | Team management, performance metrics | ✅ Complete |
-| **👑 Admin** | 8 endpoints | User management, system administration | ✅ Complete |
-| **📅 Calendar** | 8 endpoints | Holiday management, scheduling | ✅ Complete |
-| **👤 Profile** | 8 endpoints | Profile management, photo uploads | ✅ Complete |
-| **📈 Analytics** | 6 endpoints | Performance metrics, reporting | ✅ Complete |
-| **📁 Files** | 5 endpoints | File management, document storage | ✅ Complete |
+| **Module**            | **Endpoints** | **Features**                               | **Status**  |
+| --------------------- | ------------- | ------------------------------------------ | ----------- |
+| **🔐 Authentication** | 9 endpoints   | JWT auth, OTP verification, password reset | ✅ Complete |
+| **📋 Projects**       | 12 endpoints  | CRUD, team management, analytics           | ✅ Complete |
+| **✅ Tasks**          | 14 endpoints  | Task management, assignments, dependencies | ✅ Complete |
+| **🔧 Subtasks**       | 8 endpoints   | Subtask creation, tracking, completion     | ✅ Complete |
+| **⏰ Work Logs**      | 12 endpoints  | Time tracking, bulk operations, statistics | ✅ Complete |
+| **📊 Estimates**      | 9 endpoints   | Task estimation, accuracy tracking         | ✅ Complete |
+| **👥 Teams**          | 10 endpoints  | Team management, performance metrics       | ✅ Complete |
+| **👑 Admin**          | 8 endpoints   | User management, system administration     | ✅ Complete |
+| **📅 Calendar**       | 8 endpoints   | Holiday management, scheduling             | ✅ Complete |
+| **👤 Profile**        | 8 endpoints   | Profile management, photo uploads          | ✅ Complete |
+| **📈 Analytics**      | 6 endpoints   | Performance metrics, reporting             | ✅ Complete |
+| **📁 Files**          | 5 endpoints   | File management, document storage          | ✅ Complete |
 
 <details>
 <summary>🔐 <strong>Authentication Module (9 endpoints)</strong></summary>
 
-| Method | Endpoint | Description | Features |
-|--------|----------|-------------|----------|
-| `POST` | `/api/auth/register` | User registration with OTP | Email verification |
-| `POST` | `/api/auth/verify-otp` | Email verification | Complete signup |
-| `POST` | `/api/auth/resend-otp` | Resend verification | Backup delivery |
-| `POST` | `/api/auth/login` | User authentication | JWT tokens |
-| `POST` | `/api/auth/forgot-password` | Password reset request | Email recovery |
-| `POST` | `/api/auth/verify-reset-otp` | Verify reset token | Secure recovery |
-| `POST` | `/api/auth/reset-password` | Update password | Complete reset |
-| `POST` | `/api/auth/change-password` | Change password | Authenticated |
-| `POST` | `/api/auth/logout` | Session termination | Token cleanup |
+| Method | Endpoint                     | Description                | Features           |
+| ------ | ---------------------------- | -------------------------- | ------------------ |
+| `POST` | `/api/auth/register`         | User registration with OTP | Email verification |
+| `POST` | `/api/auth/verify-otp`       | Email verification         | Complete signup    |
+| `POST` | `/api/auth/resend-otp`       | Resend verification        | Backup delivery    |
+| `POST` | `/api/auth/login`            | User authentication        | JWT tokens         |
+| `POST` | `/api/auth/forgot-password`  | Password reset request     | Email recovery     |
+| `POST` | `/api/auth/verify-reset-otp` | Verify reset token         | Secure recovery    |
+| `POST` | `/api/auth/reset-password`   | Update password            | Complete reset     |
+| `POST` | `/api/auth/change-password`  | Change password            | Authenticated      |
+| `POST` | `/api/auth/logout`           | Session termination        | Token cleanup      |
 
 </details>
 
 <details>
 <summary>📋 <strong>Project Management (12 endpoints)</strong></summary>
 
-| Method | Endpoint | Description | Access Level |
-|--------|----------|-------------|-------------|
-| `GET` | `/api/projects` | List projects | All users |
-| `POST` | `/api/projects` | Create project | Manager+ |
-| `GET` | `/api/projects/:id` | Get project details | Team members |
-| `PUT` | `/api/projects/:id` | Update project | Manager+ |
-| `DELETE` | `/api/projects/:id` | Delete project | Manager+ |
-| `POST` | `/api/projects/:id/assign` | Assign team members | Manager+ |
-| `GET` | `/api/projects/dashboard` | Project analytics | All users |
-| `GET` | `/api/projects/developers` | Available developers | Manager+ |
-| `GET` | `/api/projects/:id/statistics` | Project metrics | Team members |
-| `GET` | `/api/projects/:id/timeline` | Project timeline | Team members |
-| `PUT` | `/api/projects/:id/status` | Update status | Manager+ |
-| `GET` | `/api/projects/:id/members` | Team member list | Team members |
+| Method   | Endpoint                       | Description          | Access Level |
+| -------- | ------------------------------ | -------------------- | ------------ |
+| `GET`    | `/api/projects`                | List projects        | All users    |
+| `POST`   | `/api/projects`                | Create project       | Manager+     |
+| `GET`    | `/api/projects/:id`            | Get project details  | Team members |
+| `PUT`    | `/api/projects/:id`            | Update project       | Manager+     |
+| `DELETE` | `/api/projects/:id`            | Delete project       | Manager+     |
+| `POST`   | `/api/projects/:id/assign`     | Assign team members  | Manager+     |
+| `GET`    | `/api/projects/dashboard`      | Project analytics    | All users    |
+| `GET`    | `/api/projects/developers`     | Available developers | Manager+     |
+| `GET`    | `/api/projects/:id/statistics` | Project metrics      | Team members |
+| `GET`    | `/api/projects/:id/timeline`   | Project timeline     | Team members |
+| `PUT`    | `/api/projects/:id/status`     | Update status        | Manager+     |
+| `GET`    | `/api/projects/:id/members`    | Team member list     | Team members |
 
 </details>
 
 <details>
 <summary>✅ <strong>Advanced Task System (14 endpoints)</strong></summary>
 
-| Method | Endpoint | Description | Features |
-|--------|----------|-------------|----------|
-| `GET` | `/api/tasks` | Get user tasks | Filtered by role |
-| `GET` | `/api/tasks/project/:id` | Project tasks | Complete task list |
-| `POST` | `/api/tasks` | Create task | Full task creation |
-| `GET` | `/api/tasks/:id` | Task details | Complete information |
-| `PUT` | `/api/tasks/:id` | Update task | Status, details |
-| `DELETE` | `/api/tasks/:id` | Delete task | Cascade deletion |
-| `POST` | `/api/tasks/:id/assign` | Assign developers | Multiple assignments |
-| `POST` | `/api/tasks/:id/unassign` | Remove assignments | Developer management |
-| `GET` | `/api/tasks/:id/statistics` | Task metrics | Performance data |
-| `POST` | `/api/tasks/bulk/create` | Bulk task creation | Batch operations |
-| `PUT` | `/api/tasks/bulk/update` | Bulk updates | Mass modifications |
-| `DELETE` | `/api/tasks/bulk/delete` | Bulk deletion | Multiple tasks |
-| `GET` | `/api/tasks/search` | Advanced search | Filtering options |
-| `GET` | `/api/tasks/dependencies` | Task dependencies | Relationship mapping |
+| Method   | Endpoint                    | Description        | Features             |
+| -------- | --------------------------- | ------------------ | -------------------- |
+| `GET`    | `/api/tasks`                | Get user tasks     | Filtered by role     |
+| `GET`    | `/api/tasks/project/:id`    | Project tasks      | Complete task list   |
+| `POST`   | `/api/tasks`                | Create task        | Full task creation   |
+| `GET`    | `/api/tasks/:id`            | Task details       | Complete information |
+| `PUT`    | `/api/tasks/:id`            | Update task        | Status, details      |
+| `DELETE` | `/api/tasks/:id`            | Delete task        | Cascade deletion     |
+| `POST`   | `/api/tasks/:id/assign`     | Assign developers  | Multiple assignments |
+| `POST`   | `/api/tasks/:id/unassign`   | Remove assignments | Developer management |
+| `GET`    | `/api/tasks/:id/statistics` | Task metrics       | Performance data     |
+| `POST`   | `/api/tasks/bulk/create`    | Bulk task creation | Batch operations     |
+| `PUT`    | `/api/tasks/bulk/update`    | Bulk updates       | Mass modifications   |
+| `DELETE` | `/api/tasks/bulk/delete`    | Bulk deletion      | Multiple tasks       |
+| `GET`    | `/api/tasks/search`         | Advanced search    | Filtering options    |
+| `GET`    | `/api/tasks/dependencies`   | Task dependencies  | Relationship mapping |
 
 </details>
 
@@ -345,6 +354,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 This project represents a **complete, production-ready enterprise project management system** with comprehensive functionality across all major domains:
 
 #### 🎯 **System Statistics**
+
 - **109 API Endpoints** across 12 functional modules
 - **Complete authentication system** with OTP verification
 - **Advanced work tracking** with time logs and estimates
@@ -356,22 +366,23 @@ This project represents a **complete, production-ready enterprise project manage
 
 #### 🏆 **Enterprise Features Achieved**
 
-| **Feature Domain** | **Implementation Status** | **Capabilities** |
-|-------------------|-------------------------|------------------|
-| **Authentication & Security** | ✅ 100% Complete | JWT, OTP verification, password reset, role management |
-| **Project Management** | ✅ 100% Complete | Full lifecycle, team assignment, analytics, timeline |
-| **Task System** | ✅ 100% Complete | Tasks, subtasks, dependencies, bulk operations |
-| **Work Tracking** | ✅ 100% Complete | Time logs, estimates, accuracy tracking, analytics |
-| **Team Management** | ✅ 100% Complete | Teams, members, performance, workload balancing |
-| **File Management** | ✅ 100% Complete | Secure uploads, profiles, document management |
-| **Calendar System** | ✅ 100% Complete | Holidays, scheduling, deadlines, reminders |
-| **Analytics & Reporting** | ✅ 100% Complete | Dashboard metrics, custom reports, trends |
-| **Admin Functions** | ✅ 100% Complete | User management, system administration |
-| **API Documentation** | ✅ 100% Complete | Swagger UI, comprehensive examples, test data |
+| **Feature Domain**            | **Implementation Status** | **Capabilities**                                       |
+| ----------------------------- | ------------------------- | ------------------------------------------------------ |
+| **Authentication & Security** | ✅ 100% Complete          | JWT, OTP verification, password reset, role management |
+| **Project Management**        | ✅ 100% Complete          | Full lifecycle, team assignment, analytics, timeline   |
+| **Task System**               | ✅ 100% Complete          | Tasks, subtasks, dependencies, bulk operations         |
+| **Work Tracking**             | ✅ 100% Complete          | Time logs, estimates, accuracy tracking, analytics     |
+| **Team Management**           | ✅ 100% Complete          | Teams, members, performance, workload balancing        |
+| **File Management**           | ✅ 100% Complete          | Secure uploads, profiles, document management          |
+| **Calendar System**           | ✅ 100% Complete          | Holidays, scheduling, deadlines, reminders             |
+| **Analytics & Reporting**     | ✅ 100% Complete          | Dashboard metrics, custom reports, trends              |
+| **Admin Functions**           | ✅ 100% Complete          | User management, system administration                 |
+| **API Documentation**         | ✅ 100% Complete          | Swagger UI, comprehensive examples, test data          |
 
 ### 🚀 **Production-Ready Features**
 
 #### 🔒 **Enterprise Security**
+
 - **JWT-based authentication** with secure token management
 - **Role-based access control** (Admin/Manager/Developer)
 - **Email OTP verification** for secure registration
@@ -379,6 +390,7 @@ This project represents a **complete, production-ready enterprise project manage
 - **Row-level security** policies in database
 
 #### 📊 **Advanced Analytics**
+
 - **Real-time dashboard metrics** for all user roles
 - **Performance tracking** and productivity analytics
 - **Custom report generation** with filtering options
@@ -386,12 +398,14 @@ This project represents a **complete, production-ready enterprise project manage
 - **Project timeline and milestone tracking**
 
 #### 🔧 **System Administration**
+
 - **Complete user management** with role assignments
 - **System health monitoring** and statistics
 - **Data cleanup and maintenance** functions
 - **Comprehensive logging** and error tracking
 
 #### 📚 **Developer Experience**
+
 - **Interactive Swagger UI** for API testing
 - **Comprehensive documentation** with real examples
 - **Working test suite** covering all endpoints
