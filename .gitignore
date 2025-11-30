@@ -43,7 +43,6 @@ logs/
 *.tsbuildinfo
 .vercel
 
-# Testing/Development Files
-test-api.js
+# Development-only Files (keep local)
 verify-users.js
 create-test-users.sql
