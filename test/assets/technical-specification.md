@@ -1,29 +1,18 @@
 # Technical Specification
 
-## Architecture Overview
-The system follows a microservices architecture with the following components:
+## Overview
+This is a markdown document to test file upload functionality.
 
-### Frontend
-- **Framework**: React.js with TypeScript
-- **State Management**: Redux Toolkit
-- **UI Library**: Material-UI
-- **Routing**: React Router
+### Features
+- Markdown support
+- Code blocks
+- Lists
 
-### Backend
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: PostgreSQL
-- **ORM**: Supabase Client
-- **Authentication**: JWT
+```javascript
+console.log('Hello World');
+```
 
-### Infrastructure
-- **Hosting**: Cloud platform
-- **Storage**: Supabase Storage
-- **CI/CD**: GitHub Actions
-
-## Database Schema
-- Users table with role-based access
-- Projects and tasks with relationships
-- File storage with metadata tracking
-
-Generated: 2025-11-30T08:46:04.485Z
+### Requirements
+1. File upload support
+2. All file type acceptance
+3. Storage management

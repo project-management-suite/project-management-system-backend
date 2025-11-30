@@ -595,15 +595,9 @@ exports.exportReportPDF = async (req, res) => {
 
     // Generate PDF
     const doc = new PDFDocument({ margin: 50 });
-    const filename = `${reportType}_report_${Date.now()}.pdf`;
-    const filepath = path.join(__dirname, '../../uploads', filename);
+    const filename = `reports/${reportType}_report_${Date.now()}.pdf`;
 
-    // Ensure uploads directory exists
-    await fs.mkdir(path.dirname(filepath), { recursive: true });
-
-    doc.pipe(require('fs').createWriteStream(filepath));
-
-    // Add content to PDF
+    // Add content to PDF first
     doc.fontSize(20).text('Project Management Report', { align: 'center' });
     doc.moveDown();
 
@@ -656,7 +650,44 @@ exports.exportReportPDF = async (req, res) => {
       });
     }
 
+    // End the document to trigger the buffer collection
     doc.end();
+
+    // Create a buffer to store PDF data
+    const buffers = [];
+    doc.on('data', buffers.push.bind(buffers));
+
+    // Wait for PDF generation to complete and upload to Supabase
+    const pdfResult = await new Promise((resolve, reject) => {
+      doc.on('end', async () => {
+        try {
+          const pdfBuffer = Buffer.concat(buffers);
+
+          // Upload PDF to Supabase Storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('uploads')
+            .upload(filename, pdfBuffer, {
+              contentType: 'application/pdf',
+              upsert: false
+            });
+
+          if (uploadError) {
+            return reject(new Error(`PDF upload failed: ${uploadError.message}`));
+          }
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('uploads')
+            .getPublicUrl(filename);
+
+          resolve({ filename: path.basename(filename), filePath: publicUrl, storagePath: filename });
+        } catch (error) {
+          reject(error);
+        }
+      });
+
+      doc.on('error', reject);
+    });
 
     // Save report metadata to database
     const { data: savedReport, error: saveError } = await supabase
@@ -669,7 +700,7 @@ exports.exportReportPDF = async (req, res) => {
         report_data: reportData,
         date_from: startDate || reportData.period.start,
         date_to: endDate || reportData.period.end,
-        file_path: filepath
+        file_path: pdfResult.filePath
       })
       .select()
       .single();
@@ -682,8 +713,8 @@ exports.exportReportPDF = async (req, res) => {
       success: true,
       message: 'Report generated successfully',
       reportId: savedReport?.report_id,
-      downloadUrl: `/api/reports/download/${savedReport?.report_id}`,
-      filename
+      downloadUrl: pdfResult.filePath,  // Direct Supabase URL
+      filename: pdfResult.filename
     });
 
   } catch (error) {
@@ -692,19 +723,350 @@ exports.exportReportPDF = async (req, res) => {
   }
 };
 
+/**
+ * Download PDF report
+ */
+exports.downloadReportPDF = async (req, res) => {
+  try {
+    const { reportId } = req.params;
+
+    // Get report metadata from database
+    const { data: report, error: reportError } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('report_id', reportId)
+      .single();
+
+    if (reportError || !report) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    // Check if user has access to this report
+    if (req.user.role !== 'ADMIN' && report.generated_by !== req.user.user_id) {
+      // For managers, check if they have access to the project
+      if (req.user.role === 'MANAGER' && report.project_id) {
+        const { data: project, error: projectError } = await supabase
+          .from('projects')
+          .select('manager_id')
+          .eq('project_id', report.project_id)
+          .single();
+
+        if (projectError || !project || project.manager_id !== req.user.user_id) {
+          return res.status(403).json({ error: 'Access denied' });
+        }
+      } else if (req.user.role === 'DEVELOPER') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+
+    // Check if file exists
+    if (!report.file_path || !require('fs').existsSync(report.file_path)) {
+      return res.status(404).json({ error: 'Report file not found' });
+    }
+
+    // Set headers for PDF download
+    const filename = path.basename(report.file_path);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    // Stream the file
+    const fileStream = require('fs').createReadStream(report.file_path);
+    fileStream.pipe(res);
+
+  } catch (error) {
+    console.error('PDF download error:', error);
+    res.status(500).json({ error: 'Failed to download report' });
+  }
+};
+
 // Helper functions for PDF generation
 async function generateWeeklyReportData(projectId, startDate, user) {
-  // Implementation similar to getWeeklyReport but returns data instead of response
-  // This would be extracted from the getWeeklyReport logic
-  return { project: {}, period: {}, metrics: {}, teamStats: [] };
+  // Calculate week dates
+  const start = startDate ? new Date(startDate) : new Date();
+  if (!startDate) {
+    start.setDate(start.getDate() - start.getDay()); // Start of current week
+  }
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6); // End of week
+
+  // Get project info
+  const { data: project, error: projectError } = await supabase
+    .from('projects')
+    .select('project_name, description, owner_manager_id')
+    .eq('project_id', projectId)
+    .single();
+
+  if (projectError || !project) {
+    throw new Error('Project not found');
+  }
+
+  // Get tasks data for the week
+  const { data: tasks, error: tasksError } = await supabase
+    .from('tasks')
+    .select(`
+      task_id, title, status, start_date, end_date, created_at, updated_at,
+      task_assignments(
+        developer_id,
+        profiles(username, email)
+      )
+    `)
+    .eq('project_id', projectId)
+    .or(
+      `created_at.gte.${start.toISOString()},` +
+      `updated_at.gte.${start.toISOString()},` +
+      `end_date.gte.${start.toISOString().split('T')[0]}`
+    );
+
+  if (tasksError) throw tasksError;
+
+  // Calculate metrics
+  const metrics = {
+    totalTasks: tasks.length,
+    completedTasks: tasks.filter(t => t.status === 'COMPLETED').length,
+    inProgressTasks: tasks.filter(t => t.status === 'IN_PROGRESS').length,
+    pendingTasks: tasks.filter(t => t.status === 'PENDING').length,
+    overdueTasks: tasks.filter(t =>
+      t.end_date && new Date(t.end_date) < new Date() && t.status !== 'COMPLETED'
+    ).length,
+    tasksCreatedThisWeek: tasks.filter(t =>
+      new Date(t.created_at) >= start && new Date(t.created_at) <= end
+    ).length,
+    tasksCompletedThisWeek: tasks.filter(t =>
+      new Date(t.updated_at) >= start && new Date(t.updated_at) <= end && t.status === 'COMPLETED'
+    ).length
+  };
+
+  // Calculate team productivity
+  const developerStats = {};
+  tasks.forEach(task => {
+    if (task.task_assignments && task.task_assignments.length > 0) {
+      task.task_assignments.forEach(assignment => {
+        const devId = assignment.developer_id;
+        const devName = assignment.profiles.username;
+
+        if (!developerStats[devId]) {
+          developerStats[devId] = {
+            name: devName,
+            totalTasks: 0,
+            completedTasks: 0,
+            inProgressTasks: 0
+          };
+        }
+
+        developerStats[devId].totalTasks++;
+        if (task.status === 'COMPLETED') developerStats[devId].completedTasks++;
+        if (task.status === 'IN_PROGRESS') developerStats[devId].inProgressTasks++;
+      });
+    }
+  });
+
+  return {
+    project: {
+      id: projectId,
+      name: project.project_name,
+      description: project.description
+    },
+    period: {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    },
+    metrics,
+    teamStats: Object.values(developerStats)
+  };
 }
 
 async function generateMonthlyReportData(projectId, startDate, user) {
-  // Implementation similar to getMonthlyReport but returns data instead of response
-  return { project: {}, period: {}, metrics: {}, teamStats: [] };
+  // Calculate month dates
+  const start = startDate ? new Date(startDate) : new Date();
+  start.setDate(1); // First day of month
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, 0); // Last day of month
+
+  // Get project info
+  const { data: project, error: projectError } = await supabase
+    .from('projects')
+    .select('project_name, description, owner_manager_id')
+    .eq('project_id', projectId)
+    .single();
+
+  if (projectError || !project) {
+    throw new Error('Project not found');
+  }
+
+  // Get tasks data for the month
+  const { data: tasks, error: tasksError } = await supabase
+    .from('tasks')
+    .select(`
+      task_id, title, status, start_date, end_date, created_at, updated_at,
+      task_assignments(
+        developer_id,
+        profiles(username, email)
+      )
+    `)
+    .eq('project_id', projectId)
+    .or(
+      `created_at.gte.${start.toISOString()},` +
+      `updated_at.gte.${start.toISOString()},` +
+      `end_date.gte.${start.toISOString().split('T')[0]}`
+    );
+
+  if (tasksError) throw tasksError;
+
+  // Calculate metrics (similar to weekly but for month)
+  const metrics = {
+    totalTasks: tasks.length,
+    completedTasks: tasks.filter(t => t.status === 'COMPLETED').length,
+    inProgressTasks: tasks.filter(t => t.status === 'IN_PROGRESS').length,
+    pendingTasks: tasks.filter(t => t.status === 'PENDING').length,
+    overdueTasks: tasks.filter(t =>
+      t.end_date && new Date(t.end_date) < new Date() && t.status !== 'COMPLETED'
+    ).length,
+    tasksCreatedThisMonth: tasks.filter(t =>
+      new Date(t.created_at) >= start && new Date(t.created_at) <= end
+    ).length,
+    tasksCompletedThisMonth: tasks.filter(t =>
+      new Date(t.updated_at) >= start && new Date(t.updated_at) <= end && t.status === 'COMPLETED'
+    ).length
+  };
+
+  // Team productivity
+  const developerStats = {};
+  tasks.forEach(task => {
+    if (task.task_assignments && task.task_assignments.length > 0) {
+      task.task_assignments.forEach(assignment => {
+        const devId = assignment.developer_id;
+        const devName = assignment.profiles.username;
+
+        if (!developerStats[devId]) {
+          developerStats[devId] = {
+            name: devName,
+            totalTasks: 0,
+            completedTasks: 0,
+            productivity: 0
+          };
+        }
+
+        developerStats[devId].totalTasks++;
+        if (task.status === 'COMPLETED') developerStats[devId].completedTasks++;
+      });
+    }
+  });
+
+  // Calculate productivity percentages
+  Object.values(developerStats).forEach(dev => {
+    dev.productivity = dev.totalTasks > 0 ? Math.round((dev.completedTasks / dev.totalTasks) * 100) : 0;
+  });
+
+  return {
+    project: {
+      id: projectId,
+      name: project.project_name,
+      description: project.description
+    },
+    period: {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    },
+    metrics,
+    teamStats: Object.values(developerStats)
+  };
 }
 
 async function generateCustomReportData(startDate, endDate, projectId, user) {
-  // Implementation similar to getCustomReport but returns data instead of response
-  return { period: {}, summary: {}, projects: [], teamStats: [] };
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  let projectFilter = '';
+  let projectInfo = null;
+
+  if (projectId) {
+    // Get specific project
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select('project_name, description')
+      .eq('project_id', projectId)
+      .single();
+
+    if (projectError || !project) {
+      throw new Error('Project not found');
+    }
+
+    projectInfo = {
+      id: projectId,
+      name: project.project_name,
+      description: project.description
+    };
+  }
+
+  // Build task query
+  let taskQuery = supabase
+    .from('tasks')
+    .select(`
+      task_id, title, status, start_date, end_date, created_at, updated_at, project_id,
+      projects(project_name),
+      task_assignments(
+        developer_id,
+        profiles(username, email)
+      )
+    `)
+    .or(
+      `created_at.gte.${start.toISOString()},` +
+      `updated_at.gte.${start.toISOString()},` +
+      `end_date.gte.${start.toISOString().split('T')[0]}`
+    );
+
+  if (projectId) {
+    taskQuery = taskQuery.eq('project_id', projectId);
+  }
+
+  const { data: tasks, error: tasksError } = await taskQuery;
+  if (tasksError) throw tasksError;
+
+  // Calculate metrics
+  const metrics = {
+    totalTasks: tasks.length,
+    completedTasks: tasks.filter(t => t.status === 'COMPLETED').length,
+    inProgressTasks: tasks.filter(t => t.status === 'IN_PROGRESS').length,
+    pendingTasks: tasks.filter(t => t.status === 'PENDING').length,
+    overdueTasks: tasks.filter(t =>
+      t.end_date && new Date(t.end_date) < new Date() && t.status !== 'COMPLETED'
+    ).length
+  };
+
+  // Team productivity
+  const developerStats = {};
+  tasks.forEach(task => {
+    if (task.task_assignments && task.task_assignments.length > 0) {
+      task.task_assignments.forEach(assignment => {
+        const devId = assignment.developer_id;
+        const devName = assignment.profiles.username;
+
+        if (!developerStats[devId]) {
+          developerStats[devId] = {
+            name: devName,
+            totalTasks: 0,
+            completedTasks: 0,
+            productivity: 0
+          };
+        }
+
+        developerStats[devId].totalTasks++;
+        if (task.status === 'COMPLETED') developerStats[devId].completedTasks++;
+      });
+    }
+  });
+
+  // Calculate productivity percentages
+  Object.values(developerStats).forEach(dev => {
+    dev.productivity = dev.totalTasks > 0 ? Math.round((dev.completedTasks / dev.totalTasks) * 100) : 0;
+  });
+
+  return {
+    project: projectInfo,
+    period: {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    },
+    metrics,
+    teamStats: Object.values(developerStats)
+  };
 }

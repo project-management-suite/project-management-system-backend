@@ -20,6 +20,10 @@ tmp/
 coverage/
 .nyc_output/
 
+# Test results and downloaded files
+test-results/
+test/assets/
+
 # Env files
 .env
 .env.*

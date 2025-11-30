@@ -212,4 +212,32 @@ router.get('/analytics', reportController.getDashboardAnalytics);
  */
 router.post('/export/pdf', reportController.exportReportPDF);
 
+/**
+ * @openapi
+ * /api/reports/download/{reportId}:
+ *   get:
+ *     tags: [Reports]
+ *     summary: Download generated PDF report
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Report ID
+ *     responses:
+ *       200:
+ *         description: PDF file download
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Report not found
+ *       403:
+ *         description: Access denied
+ */
+router.get('/download/:reportId', reportController.downloadReportPDF);
+
 module.exports = router;
