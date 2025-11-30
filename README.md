@@ -20,34 +20,34 @@
 
 ### 📋 Core Requirements
 
-| Goal | Status | Progress | Implementation |
-|------|--------|----------|----------------|
-| **1. Dashboard Homepage** | ✅ Completed | 100% | Role-based dashboards with project snapshots, task lists, and development tracking |
-| **2. Project Planner** | ✅ Completed | 100% | Complete task creation, scheduling, member assignment, and email notifications |
-| **3. Project Reporting** | 🔄 In Progress | 60% | Dashboard analytics implemented, weekly/monthly reports pending |
-| **4. Online Storage** | ✅ Completed | 100% | File upload, sharing, and central document management |
-| **5. Work Calendar** | 📋 Planned | 0% | Holiday calendar and task scheduling integration |
-| **6. Site Admin** | ✅ Completed | 100% | Complete admin panel for user/project management |
-| **7. Email Alerts** | ✅ Completed | 100% | OTP verification, notifications, and automated emails |
+| Goal                      | Status         | Progress | Implementation                                                                     |
+| ------------------------- | -------------- | -------- | ---------------------------------------------------------------------------------- |
+| **1. Dashboard Homepage** | ✅ Completed   | 100%     | Role-based dashboards with project snapshots, task lists, and development tracking |
+| **2. Project Planner**    | ✅ Completed   | 100%     | Complete task creation, scheduling, member assignment, and email notifications     |
+| **3. Project Reporting**  | 🔄 In Progress | 60%      | Dashboard analytics implemented, weekly/monthly reports pending                    |
+| **4. Online Storage**     | ✅ Completed   | 100%     | File upload, sharing, and central document management                              |
+| **5. Work Calendar**      | 📋 Planned     | 0%       | Holiday calendar and task scheduling integration                                   |
+| **6. Site Admin**         | ✅ Completed   | 100%     | Complete admin panel for user/project management                                   |
+| **7. Email Alerts**       | ✅ Completed   | 100%     | OTP verification, notifications, and automated emails                              |
 
 ### 👥 User Roles Implementation
 
-| Role | Access Level | Status | Features |
-|------|-------------|--------|----------|
-| **🔑 Admin (Company/Others)** | ✅ Full System Access | Complete | User management, system settings, all project operations |
-| **👔 Manager (Coordinators)** | ✅ Project Management | Complete | Create projects, assign tasks, team oversight, reporting |
-| **💻 Developer (Participants)** | ✅ Task Execution | Complete | View assignments, update progress, file access |
+| Role                            | Access Level          | Status   | Features                                                 |
+| ------------------------------- | --------------------- | -------- | -------------------------------------------------------- |
+| **🔑 Admin (Company/Others)**   | ✅ Full System Access | Complete | User management, system settings, all project operations |
+| **👔 Manager (Coordinators)**   | ✅ Project Management | Complete | Create projects, assign tasks, team oversight, reporting |
+| **💻 Developer (Participants)** | ✅ Task Execution     | Complete | View assignments, update progress, file access           |
 
 ### 🏗️ Core Modules Status
 
-| Module | Status | Backend API | Frontend UI | Features |
-|--------|--------|-------------|-------------|----------|
-| **🔐 Login & Registration** | ✅ Complete | ✅ | ✅ | JWT auth, OTP verification, role-based access |
-| **⚙️ Administration** | ✅ Complete | ✅ | ✅ | User management, system configuration |
-| **📋 Project Planner** | ✅ Complete | ✅ | ✅ | Task creation, scheduling, assignments |
-| **📊 Project Reporting** | 🔄 Partial | ✅ | 🔄 | Dashboard analytics, detailed reports pending |
-| **📁 Online Storage** | ✅ Complete | ✅ | ✅ | File upload, sharing, management |
-| **📧 E-mail Alerts** | ✅ Complete | ✅ | ✅ | OTP verification, notifications |
+| Module                      | Status      | Backend API | Frontend UI | Features                                      |
+| --------------------------- | ----------- | ----------- | ----------- | --------------------------------------------- |
+| **🔐 Login & Registration** | ✅ Complete | ✅          | ✅          | JWT auth, OTP verification, role-based access |
+| **⚙️ Administration**       | ✅ Complete | ✅          | ✅          | User management, system configuration         |
+| **📋 Project Planner**      | ✅ Complete | ✅          | ✅          | Task creation, scheduling, assignments        |
+| **📊 Project Reporting**    | 🔄 Partial  | ✅          | 🔄          | Dashboard analytics, detailed reports pending |
+| **📁 Online Storage**       | ✅ Complete | ✅          | ✅          | File upload, sharing, management              |
+| **📧 E-mail Alerts**        | ✅ Complete | ✅          | ✅          | OTP verification, notifications               |
 
 ## ✨ Features
 
@@ -313,22 +313,26 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ### ✅ **Completed Features (90% of core requirements)**
 
 1. **🔐 Complete Authentication System**
+
    - Email OTP verification for secure registration
    - JWT-based authentication with role management
    - Professional HTML email templates
 
 2. **👥 Role-Based Access Control**
+
    - Three-tier access: Admin, Manager, Developer
    - Granular permissions for each role
    - Secure API endpoints with middleware protection
 
 3. **📋 Project Management Suite**
+
    - Complete CRUD operations for projects
    - Task creation, assignment, and tracking
    - Status management (New → Assigned → In Progress → Completed)
    - Real-time dashboard analytics
 
 4. **📁 File Management System**
+
    - Secure file uploads and storage
    - Project/task-based file organization
    - Share and manage documents centrally
@@ -343,6 +347,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ### 📋 **Priority 1 - Essential Features**
 
 1. **📊 Advanced Reporting Module**
+
    - Weekly/Monthly progress reports
    - Exportable reports (PDF, Excel)
    - Email and print report functionality
@@ -357,6 +362,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ### 📋 **Priority 2 - Enhanced Features**
 
 1. **📧 Enhanced Email Notifications**
+
    - Task assignment notifications
    - Deadline reminders
    - Project status updates
@@ -371,6 +377,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ### 📋 **Priority 3 - Future Enhancements**
 
 1. **🔍 Search & Filtering**
+
    - Global search across projects/tasks
    - Advanced filtering options
    - Saved search preferences
@@ -383,6 +390,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ## 🚀 Next Steps Roadmap
 
 ### **Phase 1: Core Completion (2-3 weeks)**
+
 ```bash
 1. Implement advanced reporting system
    - Create report generation APIs
@@ -401,6 +409,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ```
 
 ### **Phase 2: Enhancement (3-4 weeks)**
+
 ```bash
 1. Advanced dashboard features
    - Gantt chart implementation
@@ -418,6 +427,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ```
 
 ### **Phase 3: Enterprise Features (4-6 weeks)**
+
 ```bash
 1. Business intelligence
    - Analytics dashboard
@@ -438,6 +448,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ## 💡 How to Continue Development
 
 ### **Immediate Actions:**
+
 1. **Set up development environment** for remaining features
 2. **Create feature branches** for each module
 3. **Implement reporting APIs** first (highest priority)
@@ -445,6 +456,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 5. **Enhance email notification system** for better user engagement
 
 ### **Development Workflow:**
+
 1. **Backend API development** → **Frontend UI** → **Integration Testing**
 2. **Database schema updates** as needed for new features
 3. **Documentation updates** for each new feature
