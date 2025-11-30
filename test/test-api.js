@@ -1037,9 +1037,344 @@ async function cleanup() {
     }
 }
 
+// Test team endpoints
+async function testTeamEndpoints() {
+    console.log('\n📋 Testing Team Management Endpoints...');
+    console.log('-'.repeat(50));
+
+    let teamId;
+    let developerId;
+
+    if (!tokens.manager) {
+        console.log('❌ Manager token not available, skipping team tests');
+        return;
+    }
+
+    try {
+        // 1. Get all teams (should work for all roles)
+        console.log('\n1. Testing GET /teams - All Teams');
+        try {
+            // Test as manager
+            const teamsResponse = await axios.get(`${BASE_URL}/teams`, {
+                headers: { Authorization: `Bearer ${tokens.manager}` }
+            });
+
+            if (teamsResponse.data.success && Array.isArray(teamsResponse.data.teams)) {
+                console.log('✅ Get all teams successful');
+                if (isInfoMode) {
+                    console.log(`   Found ${teamsResponse.data.teams.length} teams`);
+                    teamsResponse.data.teams.forEach(team => {
+                        console.log(`   - ${team.team_name} (Manager: ${team.manager?.username || 'Unknown'})`);
+                    });
+                }
+            } else {
+                console.log('❌ Get all teams failed - Invalid response structure');
+            }
+        } catch (error) {
+            console.log(`❌ Get all teams failed: ${error.response?.data?.error || error.message}`);
+        }
+
+        // 2. Create a new team (Manager only)
+        console.log('\n2. Testing POST /teams - Create Team');
+        try {
+            const createTeamResponse = await axios.post(`${BASE_URL}/teams`, {
+                team_name: `Test Team ${Date.now()}`,
+                description: 'This is a test team created by API testing'
+            }, {
+                headers: { Authorization: `Bearer ${tokens.manager}` }
+            });
+
+            if (createTeamResponse.data.success && createTeamResponse.data.team) {
+                teamId = createTeamResponse.data.team.team_id;
+                console.log('✅ Create team successful');
+                if (isInfoMode) {
+                    console.log(`   Team ID: ${teamId}`);
+                    console.log(`   Team Name: ${createTeamResponse.data.team.team_name}`);
+                }
+            } else {
+                console.log('❌ Create team failed - Invalid response');
+            }
+        } catch (error) {
+            console.log(`❌ Create team failed: ${error.response?.data?.error || error.message}`);
+        }
+
+        // 3. Get team by ID
+        if (teamId) {
+            console.log('\n3. Testing GET /teams/:id - Get Team by ID');
+            try {
+                const teamResponse = await axios.get(`${BASE_URL}/teams/${teamId}`, {
+                    headers: { Authorization: `Bearer ${tokens.manager}` }
+                });
+
+                if (teamResponse.data.success && teamResponse.data.team) {
+                    console.log('✅ Get team by ID successful');
+                    if (isInfoMode) {
+                        console.log(`   Team: ${teamResponse.data.team.team_name}`);
+                        console.log(`   Description: ${teamResponse.data.team.description}`);
+                    }
+                } else {
+                    console.log('❌ Get team by ID failed');
+                }
+            } catch (error) {
+                console.log(`❌ Get team by ID failed: ${error.response?.data?.error || error.message}`);
+            }
+        }
+
+        // 4. Get available developers
+        console.log('\n4. Testing GET /teams/available-developers - Available Developers');
+        try {
+            const developersResponse = await axios.get(`${BASE_URL}/teams/available-developers`, {
+                headers: { Authorization: `Bearer ${tokens.manager}` }
+            });
+
+            if (developersResponse.data.success && Array.isArray(developersResponse.data.developers)) {
+                console.log('✅ Get available developers successful');
+                if (developersResponse.data.developers.length > 0) {
+                    developerId = developersResponse.data.developers[0].user_id;
+                    if (isInfoMode) {
+                        console.log(`   Found ${developersResponse.data.developers.length} available developers`);
+                        developersResponse.data.developers.slice(0, 3).forEach(dev => {
+                            console.log(`   - ${dev.username} (${dev.full_name || 'No name'})`);
+                        });
+                    }
+                } else {
+                    console.log('   No available developers found');
+                }
+            } else {
+                console.log('❌ Get available developers failed');
+            }
+        } catch (error) {
+            console.log(`❌ Get available developers failed: ${error.response?.data?.error || error.message}`);
+        }
+
+        // 5. Add member to team
+        if (teamId && developerId) {
+            console.log('\n5. Testing POST /teams/:id/members - Add Member');
+            try {
+                const addMemberResponse = await axios.post(`${BASE_URL}/teams/${teamId}/members`, {
+                    userId: developerId,
+                    roleInTeam: 'DEVELOPER'
+                }, {
+                    headers: { Authorization: `Bearer ${tokens.manager}` }
+                });
+
+                if (addMemberResponse.data.success) {
+                    console.log('✅ Add member to team successful');
+                    if (isInfoMode) {
+                        console.log(`   Added developer to team with role: DEVELOPER`);
+                    }
+                } else {
+                    console.log('❌ Add member to team failed');
+                }
+            } catch (error) {
+                console.log(`❌ Add member to team failed: ${error.response?.data?.error || error.message}`);
+            }
+        }
+
+        // 6. Update member role
+        if (teamId && developerId) {
+            console.log('\n6. Testing PUT /teams/:id/members/:userId/role - Update Member Role');
+            try {
+                const updateRoleResponse = await axios.put(`${BASE_URL}/teams/${teamId}/members/${developerId}/role`, {
+                    roleInTeam: 'LEAD_DEVELOPER'
+                }, {
+                    headers: { Authorization: `Bearer ${tokens.manager}` }
+                });
+
+                if (updateRoleResponse.data.success) {
+                    console.log('✅ Update member role successful');
+                    if (isInfoMode) {
+                        console.log(`   Updated role to: LEAD_DEVELOPER`);
+                    }
+                } else {
+                    console.log('❌ Update member role failed');
+                }
+            } catch (error) {
+                console.log(`❌ Update member role failed: ${error.response?.data?.error || error.message}`);
+            }
+        }
+
+        // 7. Get team stats
+        if (teamId) {
+            console.log('\n7. Testing GET /teams/:id/stats - Team Statistics');
+            try {
+                const statsResponse = await axios.get(`${BASE_URL}/teams/${teamId}/stats`, {
+                    headers: { Authorization: `Bearer ${tokens.manager}` }
+                });
+
+                if (statsResponse.data.success && statsResponse.data.stats) {
+                    console.log('✅ Get team statistics successful');
+                    if (isInfoMode) {
+                        const stats = statsResponse.data.stats;
+                        console.log(`   Members: ${stats.totalMembers}`);
+                        console.log(`   Projects: ${stats.totalProjects}`);
+                        console.log(`   Tasks: ${stats.totalTasks}`);
+                        console.log(`   Completed: ${stats.completedTasks}`);
+                    }
+                } else {
+                    console.log('❌ Get team statistics failed');
+                }
+            } catch (error) {
+                console.log(`❌ Get team statistics failed: ${error.response?.data?.error || error.message}`);
+            }
+        }
+
+        // 8. Get team dashboard (Manager/Admin only)
+        console.log('\n8. Testing GET /teams/dashboard - Team Dashboard');
+        try {
+            const dashboardResponse = await axios.get(`${BASE_URL}/teams/dashboard`, {
+                headers: { Authorization: `Bearer ${tokens.manager}` }
+            });
+
+            if (dashboardResponse.data.success && dashboardResponse.data.dashboard) {
+                console.log('✅ Get team dashboard successful');
+                if (isInfoMode) {
+                    const dashboard = dashboardResponse.data.dashboard;
+                    console.log(`   Total Teams: ${dashboard.totalTeams}`);
+                    console.log(`   Total Members: ${dashboard.totalMembers}`);
+                    console.log(`   Teams Overview: ${dashboard.teamsOverview.length} teams`);
+                }
+            } else {
+                console.log('❌ Get team dashboard failed');
+            }
+        } catch (error) {
+            console.log(`❌ Get team dashboard failed: ${error.response?.data?.error || error.message}`);
+        }
+
+        // 9. Assign team to project (if we have a project)
+        if (teamId && projectId) {
+            console.log('\n9. Testing POST /teams/:id/projects - Assign to Project');
+            try {
+                const assignResponse = await axios.post(`${BASE_URL}/teams/${teamId}/projects`, {
+                    projectId: projectId
+                }, {
+                    headers: { Authorization: `Bearer ${tokens.manager}` }
+                });
+
+                if (assignResponse.data.success) {
+                    console.log('✅ Assign team to project successful');
+                    if (isInfoMode) {
+                        console.log(`   Assigned team to project: ${projectId}`);
+                    }
+                } else {
+                    console.log('❌ Assign team to project failed');
+                }
+            } catch (error) {
+                console.log(`❌ Assign team to project failed: ${error.response?.data?.error || error.message}`);
+            }
+        }
+
+        // 10. Update team
+        if (teamId) {
+            console.log('\n10. Testing PUT /teams/:id - Update Team');
+            try {
+                const updateResponse = await axios.put(`${BASE_URL}/teams/${teamId}`, {
+                    team_name: `Updated Test Team ${Date.now()}`,
+                    description: 'Updated description for test team'
+                }, {
+                    headers: { Authorization: `Bearer ${tokens.manager}` }
+                });
+
+                if (updateResponse.data.success) {
+                    console.log('✅ Update team successful');
+                    if (isInfoMode) {
+                        console.log(`   Updated team: ${updateResponse.data.team.team_name}`);
+                    }
+                } else {
+                    console.log('❌ Update team failed');
+                }
+            } catch (error) {
+                console.log(`❌ Update team failed: ${error.response?.data?.error || error.message}`);
+            }
+        }
+
+        // 11. Remove member from team
+        if (teamId && developerId) {
+            console.log('\n11. Testing DELETE /teams/:id/members/:userId - Remove Member');
+            try {
+                const removeResponse = await axios.delete(`${BASE_URL}/teams/${teamId}/members/${developerId}`, {
+                    headers: { Authorization: `Bearer ${tokens.manager}` }
+                });
+
+                if (removeResponse.data.success) {
+                    console.log('✅ Remove member from team successful');
+                } else {
+                    console.log('❌ Remove member from team failed');
+                }
+            } catch (error) {
+                console.log(`❌ Remove member from team failed: ${error.response?.data?.error || error.message}`);
+            }
+        }
+
+        // 12. Remove team from project
+        if (teamId && projectId) {
+            console.log('\n12. Testing DELETE /teams/:id/projects/:projectId - Remove from Project');
+            try {
+                const removeProjectResponse = await axios.delete(`${BASE_URL}/teams/${teamId}/projects/${projectId}`, {
+                    headers: { Authorization: `Bearer ${tokens.manager}` }
+                });
+
+                if (removeProjectResponse.data.success) {
+                    console.log('✅ Remove team from project successful');
+                } else {
+                    console.log('❌ Remove team from project failed');
+                }
+            } catch (error) {
+                console.log(`❌ Remove team from project failed: ${error.response?.data?.error || error.message}`);
+            }
+        }
+
+        // 13. Delete team (cleanup)
+        if (teamId) {
+            console.log('\n13. Testing DELETE /teams/:id - Delete Team');
+            try {
+                const deleteResponse = await axios.delete(`${BASE_URL}/teams/${teamId}`, {
+                    headers: { Authorization: `Bearer ${tokens.manager}` }
+                });
+
+                if (deleteResponse.data.success) {
+                    console.log('✅ Delete team successful');
+                } else {
+                    console.log('❌ Delete team failed');
+                }
+            } catch (error) {
+                console.log(`❌ Delete team failed: ${error.response?.data?.error || error.message}`);
+            }
+        }
+
+        // 14. Test access control (Developer trying to create team)
+        console.log('\n14. Testing Access Control - Developer Create Team (Should Fail)');
+        try {
+            const unauthorizedResponse = await axios.post(`${BASE_URL}/teams`, {
+                team_name: 'Unauthorized Team',
+                description: 'This should fail'
+            }, {
+                headers: { Authorization: `Bearer ${tokens.developer}` }
+            });
+
+            console.log('❌ Access control failed - Developer was allowed to create team');
+        } catch (error) {
+            if (error.response?.status === 403) {
+                console.log('✅ Access control working - Developer correctly denied team creation');
+            } else {
+                console.log(`❌ Access control test failed: ${error.response?.data?.error || error.message}`);
+            }
+        }
+
+        console.log('\n📋 Team Management Testing Complete');
+        console.log(`✅ Tested 14 team endpoints with proper authentication and authorization`);
+
+    } catch (error) {
+        console.log(`\n💥 TEAM TESTING ERROR: ${error.message}`);
+        if (isInfoMode) {
+            console.error('💥 Full error:', error);
+        }
+    }
+}
+
 // Main test function
 async function runAllTests() {
-    console.log('🚀 STARTING COMPREHENSIVE API TESTING - ALL 52 ENDPOINTS');
+    console.log('🚀 STARTING COMPREHENSIVE API TESTING - ALL 66 ENDPOINTS');
     console.log('='.repeat(70));
     console.log(`Testing API at: ${BASE_URL}`);
     console.log(`Testing with users: Admin, Manager, Developer`);
@@ -1065,15 +1400,17 @@ async function runAllTests() {
         await testCalendarEndpoints();
         await testReportingEndpoints();
         await testFileEndpoints();
+        await testTeamEndpoints();
         await cleanup();
 
         console.log('\n🎉 ALL TESTS COMPLETED!');
         console.log('='.repeat(70));
         console.log('Check the output above for any failed tests (❌)');
         console.log('All successful tests are marked with (✅)');
-        console.log(`\n📊 COVERAGE: Testing all 52 API endpoints across 8 modules`);
+        console.log(`\n📊 COVERAGE: Testing all 66 API endpoints across 9 modules`);
         console.log('📷 INCLUDES: Profile photo upload/update/delete with real test images');
         console.log('📁 INCLUDES: Project file upload/download/delete with real documents');
+        console.log('👥 INCLUDES: Comprehensive team management with member and project assignments');
 
         if (isInfoMode) {
             console.log('\n📋 INFO MODE: Detailed logging was enabled for this run');

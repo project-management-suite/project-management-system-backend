@@ -14,6 +14,7 @@ const reportRoutes = require('./routes/report.routes');
 const calendarRoutes = require('./routes/calendar.routes');
 const profileRoutes = require('./routes/profile.routes');
 const adminRoutes = require('./routes/admin.routes');
+const teamRoutes = require('./routes/team.routes');
 const { errorHandler } = require('./middlewares/error.middleware');
 const { startScheduledJobs } = require('./utils/scheduler');
 const { homepageHTML } = require('./views/homepage');
@@ -72,6 +73,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/teams', teamRoutes);
 
 app.get('/', (req, res) => {
   res.send(homepageHTML);
