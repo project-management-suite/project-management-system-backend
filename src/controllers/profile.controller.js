@@ -1,0 +1,338 @@
+// src/controllers/profile.controller.js
+const { supabase } = require('../config/supabase');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs').promises;
+const crypto = require('crypto');
+
+// Configure multer for profile photo uploads
+const storage = multer.diskStorage({
+    destination: async (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../../uploads/profile-photos');
+        try {
+            await fs.mkdir(uploadDir, { recursive: true });
+            cb(null, uploadDir);
+        } catch (error) {
+            cb(error);
+        }
+    },
+    filename: (req, file, cb) => {
+        // Generate unique filename: userId_timestamp_random.ext
+        const uniqueSuffix = Date.now() + '_' + crypto.randomUUID().slice(0, 8);
+        const extension = path.extname(file.originalname);
+        cb(null, `${req.user.user_id}_${uniqueSuffix}${extension}`);
+    }
+});
+
+// File filter for profile photos
+const fileFilter = (req, file, cb) => {
+    // Accept only image files
+    const allowedMimeTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/gif',
+        'image/webp'
+    ];
+
+    if (allowedMimeTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'), false);
+    }
+};
+
+// Configure multer
+const upload = multer({
+    storage,
+    fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB max file size
+        files: 1 // Only one file at a time
+    }
+});
+
+// Middleware for handling photo upload
+exports.uploadMiddleware = upload.single('profilePhoto');
+
+/**
+ * Get user profile with current photo
+ */
+exports.getProfile = async (req, res) => {
+    try {
+        const userId = req.params.userId || req.user.user_id;
+
+        // Check if user can view this profile
+        if (userId !== req.user.user_id && req.user.role !== 'ADMIN') {
+            return res.status(403).json({ error: 'Access denied to this profile' });
+        }
+
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select(`
+        user_id,
+        username, 
+        email,
+        role,
+        profile_photo_url,
+        profile_photo_uploaded_at,
+        created_at,
+        updated_at
+      `)
+            .eq('user_id', userId)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                return res.status(404).json({ error: 'Profile not found' });
+            }
+            throw error;
+        }
+
+        res.json({
+            success: true,
+            profile
+        });
+
+    } catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({ error: 'Failed to retrieve profile' });
+    }
+};
+
+/**
+ * Upload profile photo
+ */
+exports.uploadProfilePhoto = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No photo file provided' });
+        }
+
+        const userId = req.user.user_id;
+        const file = req.file;
+
+        // Create public URL (you'll need to serve static files or use cloud storage)
+        const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+        const photoUrl = `${baseUrl}/uploads/profile-photos/${file.filename}`;
+
+        // Update database using the stored function
+        const { data, error } = await supabase.rpc('update_user_profile_photo', {
+            p_user_id: userId,
+            p_file_name: file.originalname,
+            p_file_path: file.path,
+            p_file_url: photoUrl,
+            p_file_size: file.size,
+            p_mime_type: file.mimetype
+        });
+
+        if (error) throw error;
+
+        // Get updated profile info
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('user_id, username, profile_photo_url, profile_photo_uploaded_at')
+            .eq('user_id', userId)
+            .single();
+
+        if (profileError) throw profileError;
+
+        res.json({
+            success: true,
+            message: 'Profile photo uploaded successfully',
+            profile: {
+                user_id: profile.user_id,
+                username: profile.username,
+                profile_photo_url: profile.profile_photo_url,
+                profile_photo_uploaded_at: profile.profile_photo_uploaded_at
+            }
+        });
+
+    } catch (error) {
+        // Clean up uploaded file if database operation failed
+        if (req.file && req.file.path) {
+            try {
+                await fs.unlink(req.file.path);
+            } catch (unlinkError) {
+                console.error('Failed to delete uploaded file:', unlinkError);
+            }
+        }
+
+        console.error('Upload profile photo error:', error);
+
+        if (error.message.includes('Invalid file type')) {
+            return res.status(400).json({ error: error.message });
+        }
+
+        res.status(500).json({ error: 'Failed to upload profile photo' });
+    }
+};
+
+/**
+ * Update profile photo (replace existing)
+ */
+exports.updateProfilePhoto = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No photo file provided' });
+        }
+
+        const userId = req.user.user_id;
+
+        // Get current photo info to delete old file
+        const { data: currentProfile } = await supabase
+            .from('profiles')
+            .select('profile_photo_path')
+            .eq('user_id', userId)
+            .single();
+
+        // Delete old photo file if exists
+        if (currentProfile && currentProfile.profile_photo_path) {
+            try {
+                await fs.unlink(currentProfile.profile_photo_path);
+            } catch (deleteError) {
+                console.error('Failed to delete old photo file:', deleteError);
+                // Continue with upload even if old file deletion fails
+            }
+        }
+
+        // Upload new photo (same logic as upload)
+        const file = req.file;
+        const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+        const photoUrl = `${baseUrl}/uploads/profile-photos/${file.filename}`;
+
+        const { data, error } = await supabase.rpc('update_user_profile_photo', {
+            p_user_id: userId,
+            p_file_name: file.originalname,
+            p_file_path: file.path,
+            p_file_url: photoUrl,
+            p_file_size: file.size,
+            p_mime_type: file.mimetype
+        });
+
+        if (error) throw error;
+
+        // Get updated profile
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('user_id, username, profile_photo_url, profile_photo_uploaded_at')
+            .eq('user_id', userId)
+            .single();
+
+        if (profileError) throw profileError;
+
+        res.json({
+            success: true,
+            message: 'Profile photo updated successfully',
+            profile
+        });
+
+    } catch (error) {
+        // Clean up uploaded file if operation failed
+        if (req.file && req.file.path) {
+            try {
+                await fs.unlink(req.file.path);
+            } catch (unlinkError) {
+                console.error('Failed to delete uploaded file:', unlinkError);
+            }
+        }
+
+        console.error('Update profile photo error:', error);
+        res.status(500).json({ error: 'Failed to update profile photo' });
+    }
+};
+
+/**
+ * Remove profile photo
+ */
+exports.removeProfilePhoto = async (req, res) => {
+    try {
+        const userId = req.user.user_id;
+
+        // Get current photo info
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('profile_photo_path')
+            .eq('user_id', userId)
+            .single();
+
+        if (!profile || !profile.profile_photo_path) {
+            return res.status(404).json({ error: 'No profile photo to remove' });
+        }
+
+        // Remove from database
+        const { data, error } = await supabase.rpc('remove_user_profile_photo', {
+            p_user_id: userId
+        });
+
+        if (error) throw error;
+
+        // Delete file from filesystem
+        try {
+            await fs.unlink(profile.profile_photo_path);
+        } catch (deleteError) {
+            console.error('Failed to delete photo file:', deleteError);
+            // Continue even if file deletion fails - database is already updated
+        }
+
+        res.json({
+            success: true,
+            message: 'Profile photo removed successfully'
+        });
+
+    } catch (error) {
+        console.error('Remove profile photo error:', error);
+        res.status(500).json({ error: 'Failed to remove profile photo' });
+    }
+};
+
+/**
+ * Get profile photo history
+ */
+exports.getPhotoHistory = async (req, res) => {
+    try {
+        const userId = req.user.user_id;
+
+        const { data: photos, error } = await supabase
+            .from('profile_photos')
+            .select('photo_id, file_name, file_url, file_size, mime_type, is_current, uploaded_at')
+            .eq('user_id', userId)
+            .order('uploaded_at', { ascending: false })
+            .limit(10); // Limit to last 10 photos
+
+        if (error) throw error;
+
+        res.json({
+            success: true,
+            photos: photos || []
+        });
+
+    } catch (error) {
+        console.error('Get photo history error:', error);
+        res.status(500).json({ error: 'Failed to retrieve photo history' });
+    }
+};
+
+/**
+ * Admin function to cleanup old profile photos
+ */
+exports.cleanupOldPhotos = async (req, res) => {
+    try {
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+
+        const { data: deletedCount, error } = await supabase.rpc('cleanup_old_profile_photos');
+
+        if (error) throw error;
+
+        res.json({
+            success: true,
+            message: `Cleaned up ${deletedCount || 0} old profile photos`
+        });
+
+    } catch (error) {
+        console.error('Cleanup old photos error:', error);
+        res.status(500).json({ error: 'Failed to cleanup old photos' });
+    }
+};

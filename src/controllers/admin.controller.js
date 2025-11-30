@@ -5,7 +5,7 @@ exports.getUsers = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('user_id, username, email, role, email_verified, profile_photo_url, profile_photo_uploaded_at, created_at, updated_at')
       .order('created_at', { ascending: false });
 
     if (error) throw error;

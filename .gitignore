@@ -42,3 +42,8 @@ logs/
 # Misc
 *.tsbuildinfo
 .vercel
+
+# Testing/Development Files
+test-api.js
+verify-users.js
+create-test-users.sql

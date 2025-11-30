@@ -11,6 +11,8 @@ class User {
     this.email = data.email;
     this.role = data.role;
     this.email_verified = data.email_verified || false;
+    this.profile_photo_url = data.profile_photo_url || null;
+    this.profile_photo_uploaded_at = data.profile_photo_uploaded_at || null;
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
   }

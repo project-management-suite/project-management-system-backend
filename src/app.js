@@ -12,6 +12,7 @@ const taskRoutes = require('./routes/task.routes');
 const fileRoutes = require('./routes/file.routes');
 const reportRoutes = require('./routes/report.routes');
 const calendarRoutes = require('./routes/calendar.routes');
+const profileRoutes = require('./routes/profile.routes');
 const adminRoutes = require('./routes/admin.routes');
 const { errorHandler } = require('./middlewares/error.middleware');
 const { startScheduledJobs } = require('./utils/scheduler');
@@ -69,7 +70,11 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/profile', profileRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
 
 app.get('/', (req, res) => {
   res.send(homepageHTML);
