@@ -100,9 +100,9 @@ const apiDocsHTML = `
         <div class="endpoint-info">
           <div class="description">Register a new user (sends OTP to email)</div>
           <pre>{
-  "username": "john_doe",
-  "email": "john@example.com",
-  "password": "securePassword123",
+  "username": "test_developer",
+  "email": "testdeveloper@testapp.com",
+  "password": "testpass123",
   "role": "DEVELOPER"
 }</pre>
           <div class="description"><strong>Response:</strong> OTP sent to email for verification</div>
@@ -110,7 +110,7 @@ const apiDocsHTML = `
 {
   "success": true,
   "message": "OTP sent to your email. Please verify to complete registration.",
-  "email": "john@example.com",
+  "email": "testdeveloper@testapp.com",
   "tempUserId": "temp-uuid-123"
 }</pre>
         </div>
@@ -121,7 +121,7 @@ const apiDocsHTML = `
         <div class="endpoint-info">
           <div class="description">Verify OTP and complete registration</div>
           <pre>{
-  "email": "john@example.com",
+  "email": "testdeveloper@testapp.com",
   "otp": "123456"
 }</pre>
           <div class="description"><strong>Response:</strong> JWT token and user data</div>
@@ -132,8 +132,8 @@ const apiDocsHTML = `
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
     "id": "user-uuid-456",
-    "username": "john_doe",
-    "email": "john@example.com",
+    "username": "test_developer",
+    "email": "testdeveloper@testapp.com",
     "role": "DEVELOPER",
     "email_verified": true,
     "created_at": "2024-01-15T10:30:00Z"
@@ -147,7 +147,7 @@ const apiDocsHTML = `
         <div class="endpoint-info">
           <div class="description">Resend OTP to email</div>
           <pre>{
-  "email": "john@example.com"
+  "email": "testadmin@testapp.com"
 }</pre>
         </div>
       </div>
@@ -157,8 +157,8 @@ const apiDocsHTML = `
         <div class="endpoint-info">
           <div class="description">Login user (requires verified email)</div>
           <pre>{
-  "email": "john@example.com",
-  "password": "securePassword123"
+  "email": "testmanager@testapp.com",
+  "password": "testpass123"
 }</pre>
           <div class="description"><strong>Response:</strong> JWT token and user profile</div>
           <pre><strong>Sample Response (200):</strong>
@@ -168,9 +168,9 @@ const apiDocsHTML = `
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
     "id": "user-uuid-456",
-    "username": "john_doe",
-    "email": "john@example.com",
-    "role": "DEVELOPER",
+    "username": "test_manager",
+    "email": "testmanager@testapp.com",
+    "role": "MANAGER",
     "email_verified": true
   }
 }</pre>
@@ -198,15 +198,15 @@ const apiDocsHTML = `
   "projects": [
     {
       "id": "proj-uuid-123",
-      "project_name": "E-commerce Platform",
-      "description": "Online shopping platform",
+      "project_name": "Test Project API",
+      "description": "A test project created by automated API testing script",
       "status": "IN_PROGRESS",
-      "start_date": "2024-01-01",
-      "end_date": "2024-06-30",
+      "start_date": "2025-12-01",
+      "end_date": "2025-12-31",
       "created_by": "manager-uuid-789",
-      "task_count": 25,
-      "completed_tasks": 15,
-      "team_members": 8
+      "task_count": 1,
+      "completed_tasks": 0,
+      "team_members": 3
     }
   ]
 }</pre>
@@ -250,10 +250,10 @@ const apiDocsHTML = `
         <div class="endpoint-info">
           <div class="description">Create a new project</div>
           <pre>{
-  "project_name": "E-commerce Platform",
-  "description": "A comprehensive online shopping platform",
-  "start_date": "2024-01-01",
-  "end_date": "2024-06-30"
+  "project_name": "Test Project API",
+  "description": "A test project created by automated API testing script",
+  "start_date": "2025-12-01",
+  "end_date": "2025-12-31"
 }</pre>
           <div class="description"><strong>Auth Required:</strong> Manager or Admin role</div>
         </div>
@@ -330,17 +330,17 @@ const apiDocsHTML = `
   "tasks": [
     {
       "id": "task-uuid-456",
-      "title": "Implement User Authentication",
-      "description": "Create secure login system",
+      "title": "Test Task API",
+      "description": "A test task created by automated API testing script",
       "project_id": "proj-uuid-123",
       "status": "IN_PROGRESS",
       "priority": "HIGH",
-      "due_date": "2024-02-15T23:59:59Z",
-      "estimated_hours": 16,
-      "actual_hours": 8.5,
+      "due_date": "2025-12-15T23:59:59Z",
+      "estimated_hours": 8,
+      "actual_hours": 2.5,
       "assigned_to": "dev-uuid-123",
-      "subtask_count": 3,
-      "completion_percentage": 60
+      "subtask_count": 1,
+      "completion_percentage": 30
     }
   ]
 }</pre>
@@ -382,12 +382,12 @@ const apiDocsHTML = `
         <div class="endpoint-info">
           <div class="description">Create a new task in a project</div>
           <pre>{
-  "title": "Implement User Authentication",
-  "description": "Create secure login system with JWT tokens",
+  "title": "Test Task API",
+  "description": "A test task created by automated API testing script",
   "priority": "HIGH",
-  "due_date": "2024-02-15T23:59:59Z",
-  "estimated_hours": 16,
-  "assigned_to": "user-uuid-456"
+  "start_date": "2025-12-01",
+  "end_date": "2025-12-15",
+  "status": "TODO"
 }</pre>
           <div class="description"><strong>Auth Required:</strong> Manager or Admin role</div>
         </div>
@@ -447,11 +447,13 @@ const apiDocsHTML = `
         <div class="endpoint-info">
           <div class="description">Create a new subtask</div>
           <pre>{
-  "title": "Create login form",
-  "description": "Design responsive login form with validation",
+  "title": "Test Subtask API",
+  "description": "A test subtask created by automated API testing script",
   "task_id": "task-uuid-123",
   "priority": "MEDIUM",
-  "estimated_hours": 4
+  "estimated_hours": 4.5,
+  "start_date": "2025-12-02",
+  "end_date": "2025-12-05"
 }</pre>
           <pre><strong>Sample Response (201):</strong>
 {
@@ -459,14 +461,14 @@ const apiDocsHTML = `
   "message": "Subtask created successfully",
   "subtask": {
     "id": "subtask-uuid-789",
-    "title": "Create login form",
-    "description": "Design responsive login form with validation",
+    "title": "Test Subtask API",
+    "description": "A test subtask created by automated API testing script",
     "task_id": "task-uuid-123",
     "status": "TODO",
     "priority": "MEDIUM",
-    "estimated_hours": 4,
-    "created_by": "dev-uuid-456",
-    "created_at": "2024-01-15T14:30:00Z"
+    "estimated_hours": 4.5,
+    "created_by": "manager-uuid-456",
+    "created_at": "2025-12-01T14:30:00Z"
   }
 }</pre>
         </div>
@@ -570,10 +572,10 @@ const apiDocsHTML = `
         <div class="endpoint-info">
           <div class="description">Create a new work log entry</div>
           <pre>{
-  "hours_logged": 3.5,
-  "work_date": "2024-01-15",
+  "hours_logged": 2.5,
+  "work_date": "2025-12-02",
   "task_id": "task-uuid-123",
-  "description": "Implemented login validation",
+  "description": "Initial implementation and testing of task functionality",
   "log_type": "DEVELOPMENT"
 }</pre>
           <pre><strong>Sample Response (201):</strong>
@@ -583,12 +585,12 @@ const apiDocsHTML = `
   "worklog": {
     "id": "log-uuid-456",
     "user_id": "dev-uuid-123",
-    "hours_logged": 3.5,
-    "work_date": "2024-01-15",
+    "hours_logged": 2.5,
+    "work_date": "2025-12-02",
     "task_id": "task-uuid-123",
-    "description": "Implemented login validation",
+    "description": "Initial implementation and testing of task functionality",
     "log_type": "DEVELOPMENT",
-    "created_at": "2024-01-15T18:30:00Z"
+    "created_at": "2025-12-02T18:30:00Z"
   }
 }</pre>
         </div>
@@ -616,22 +618,22 @@ const apiDocsHTML = `
 {
   "success": true,
   "stats": {
-    "total_hours_logged": 160.5,
-    "hours_this_week": 40,
-    "hours_this_month": 140,
-    "total_work_days": 22,
-    "average_hours_per_day": 7.3,
+    "total_hours_logged": 45.5,
+    "hours_this_week": 12.5,
+    "hours_this_month": 45.5,
+    "total_work_days": 8,
+    "average_hours_per_day": 5.7,
     "most_productive_day": "Tuesday",
     "breakdown_by_type": {
-      "DEVELOPMENT": 120.5,
-      "TESTING": 25,
-      "REVIEW": 15
+      "DEVELOPMENT": 32.5,
+      "TESTING": 8.0,
+      "REVIEW": 5.0
     },
     "recent_activity": [
       {
-        "date": "2024-01-15",
-        "hours": 8,
-        "tasks_worked": 3
+        "date": "2025-12-02",
+        "hours": 2.5,
+        "tasks_worked": 1
       }
     ]
   }
@@ -749,11 +751,11 @@ const apiDocsHTML = `
         <div class="endpoint-info">
           <div class="description">Create a new task/subtask estimate</div>
           <pre>{
-  "estimated_hours": 8,
+  "estimated_hours": 16.0,
   "task_id": "task-uuid-123",
   "complexity": "MEDIUM",
   "confidence_level": 4,
-  "notes": "Based on similar features"
+  "notes": "Initial estimate based on requirements analysis"
 }</pre>
           <pre><strong>Sample Response (201):</strong>
 {
@@ -834,8 +836,8 @@ const apiDocsHTML = `
         <div class="endpoint-info">
           <div class="description">Create a new team</div>
           <pre>{
-  "team_name": "Frontend Development Team",
-  "description": "Responsible for UI/UX development"
+  "team_name": "Test Development Team",
+  "description": "A test team created by automated API testing script"
 }</pre>
           <pre><strong>Sample Response (201):</strong>
 {
@@ -843,11 +845,11 @@ const apiDocsHTML = `
   "message": "Team created successfully",
   "team": {
     "team_id": "team-uuid-123",
-    "team_name": "Frontend Development Team",
-    "description": "Responsible for UI/UX development",
+    "team_name": "Test Development Team",
+    "description": "A test team created by automated API testing script",
     "manager_id": "manager-uuid-456",
     "member_count": 0,
-    "created_at": "2024-01-15T09:00:00Z"
+    "created_at": "2025-12-01T09:00:00Z"
   }
 }</pre>
         </div>
@@ -890,28 +892,28 @@ const apiDocsHTML = `
   "success": true,
   "analytics": {
     "overview": {
-      "totalProjects": 15,
-      "totalTasks": 245,
-      "completedTasks": 180,
-      "overdueTasks": 12,
-      "activeUsers": 25
+      "totalProjects": 3,
+      "totalTasks": 12,
+      "completedTasks": 8,
+      "overdueTasks": 1,
+      "activeUsers": 3
     },
     "thisMonth": {
-      "tasksCompleted": 45,
-      "hoursLogged": 1250,
-      "projectsDelivered": 3
+      "tasksCompleted": 8,
+      "hoursLogged": 45.5,
+      "projectsDelivered": 1
     },
     "statusDistribution": {
-      "TODO": 25,
-      "IN_PROGRESS": 40,
-      "IN_REVIEW": 15,
-      "DONE": 180,
-      "BLOCKED": 5
+      "TODO": 2,
+      "IN_PROGRESS": 2,
+      "IN_REVIEW": 0,
+      "DONE": 8,
+      "BLOCKED": 0
     },
     "productivity": {
-      "estimationAccuracy": 82.5,
-      "onTimeDelivery": 78.3,
-      "teamVelocity": 92.1
+      "estimationAccuracy": 78.5,
+      "onTimeDelivery": 85.0,
+      "teamVelocity": 90.2
     }
   }
 }</pre>
