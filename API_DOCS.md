@@ -2,7 +2,7 @@
 
 ## Overview
 
-This backend API provides a REST interface for the Project Management System. It includes email-based OTP verification for secure user registration, works with Supabase as the database, and provides role-based access control for ADMIN, MANAGER, and DEVELOPER users.
+This backend API provides a comprehensive REST interface for the Project Management System with **118 endpoints** across 12 functional modules. It includes email-based OTP verification, password management, bulk task operations, and works with Supabase as the database providing role-based access control for ADMIN, MANAGER, and DEVELOPER users.
 
 ## Base URL
 
@@ -20,7 +20,7 @@ Authorization: Bearer <jwt_token>
 
 ## API Endpoints
 
-### Authentication & OTP Verification (`/api/auth`)
+### Authentication & User Management (`/api/auth`) - 8 Endpoints
 
 #### Register User (Step 1: Send OTP)
 
@@ -49,6 +49,34 @@ Authorization: Bearer <jwt_token>
 - **Body**: `{ email, password }`
 - **Response**: `{ token, user: { id, username, email, role, email_verified } }`
 - **Description**: Authenticates user login. Only users with verified emails can log in.
+
+#### Forgot Password
+
+- **POST** `/auth/forgot-password`
+- **Body**: `{ email }`
+- **Response**: `{ message: "Password reset OTP sent to your email" }`
+- **Description**: Sends a password reset OTP to the user's email address.
+
+#### Verify Reset OTP
+
+- **POST** `/auth/verify-reset-otp`
+- **Body**: `{ email, otp }`
+- **Response**: `{ message: "OTP verified. You can now reset your password.", resetToken: "temporary_token" }`
+- **Description**: Verifies the password reset OTP and provides a temporary token for password reset.
+
+#### Reset Password
+
+- **POST** `/auth/reset-password`
+- **Body**: `{ resetToken, newPassword }`
+- **Response**: `{ message: "Password reset successful" }`
+- **Description**: Resets the user's password using the temporary reset token.
+
+#### Logout User
+
+- **POST** `/auth/logout`
+- **Headers**: `Authorization: Bearer <token>`
+- **Response**: `{ message: "Logged out successfully" }`
+- **Description**: Logs out the user and invalidates the session.
 
 **Registration Flow Example:**
 
@@ -114,7 +142,7 @@ POST /auth/verify-otp
 - **Access**: All roles
 - **Response**: `{ projects: [...], tasks: [...] }`
 
-### Tasks (`/api/tasks`)
+### Tasks (`/api/tasks`) - 11 Endpoints
 
 #### List User Tasks
 
@@ -166,6 +194,30 @@ POST /auth/verify-otp
 - **DELETE** `/tasks/:taskId/unassign/:developerId`
 - **Access**: Project owner, ADMIN
 - **Response**: `{ message: "Developer unassigned successfully" }`
+
+#### Bulk Create Tasks
+
+- **POST** `/tasks/project/:projectId/bulk/create`
+- **Access**: All authenticated users
+- **Body**: `{ tasks: [{ title, description?, start_date?, end_date? }, ...] }`
+- **Response**: `{ message: "Bulk task creation completed", results: [...], summary: { total, successful, failed } }`
+- **Description**: Create multiple tasks at once with unlimited capacity.
+
+#### Bulk Update Tasks
+
+- **PUT** `/tasks/bulk/update`
+- **Access**: All authenticated users
+- **Body**: `{ tasks: [{ task_id, title?, description?, start_date?, end_date?, status? }, ...] }`
+- **Response**: `{ message: "Bulk task update completed", results: [...], summary: { total, successful, failed } }`
+- **Description**: Update multiple tasks at once with unlimited capacity.
+
+#### Bulk Delete Tasks
+
+- **DELETE** `/tasks/bulk/delete`
+- **Access**: All authenticated users
+- **Body**: `{ task_ids: ["uuid1", "uuid2", ...] }`
+- **Response**: `{ message: "Bulk task deletion completed", results: [...], summary: { total, successful, failed } }`
+- **Description**: Delete multiple tasks at once with unlimited capacity.
 
 ### Files (`/api/files`)
 
@@ -363,7 +415,10 @@ This backend is designed to work alongside the existing Supabase frontend. The f
 The backend provides additional features like:
 
 - **Email OTP Verification**: Secure user registration with 6-digit email verification
+- **Complete Password Management**: Forgot password, reset with OTP, change password, secure logout
+- **Bulk Task Operations**: Create, update, or delete unlimited tasks with transaction safety
 - **Professional Email Templates**: HTML-formatted emails with modern design
+- **Democratic Access Control**: All authenticated users can perform bulk operations
 - Advanced file upload handling
 - Complex permission checks
 - Email notifications

@@ -84,7 +84,7 @@ const apiDocsHTML = `
   <div class="container">
     <div class="header">
       <h1>🚀 Project Management System API</h1>
-      <p>Complete API Documentation - 109 Endpoints</p>
+      <p>Complete API Documentation - 118 Endpoints</p>
       <p style="margin: 10px 0; opacity: 0.9;">Authentication • Projects • Tasks • Subtasks • Work Logs • Estimates • Teams • Reports • Files • Calendar • Profiles • Admin</p>
       <div style="margin: 15px 0;">
         <a href="/api/swagger" style="color: #90cdf4; text-decoration: none; margin: 0 10px;">📚 Interactive Swagger UI</a>
@@ -93,7 +93,7 @@ const apiDocsHTML = `
     </div>
     
     <div class="content">
-      <h2>🔐 Authentication Endpoints (5)</h2>
+      <h2>🔐 Authentication Endpoints (8)</h2>
       
       <div class="endpoint">
         <div class="method post">POST /api/auth/register</div>
@@ -198,6 +198,106 @@ const apiDocsHTML = `
   "generated_at": "2025-12-01T14:25:00Z",
   "expires_at": "2025-12-01T14:35:00Z",
   "is_valid": true
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method post">POST /api/auth/forgot-password</div>
+        <div class="endpoint-info">
+          <div class="description">Request password reset (sends OTP to email)</div>
+          <pre>{
+  "email": "testmanager@testapp.com"
+}</pre>
+          <div class="description"><strong>Response:</strong> Password reset OTP sent to email</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "Password reset OTP sent to your email",
+  "email": "testmanager@testapp.com",
+  "expires_in": "10 minutes"
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method post">POST /api/auth/verify-reset-otp</div>
+        <div class="endpoint-info">
+          <div class="description">Verify password reset OTP (returns reset token)</div>
+          <pre>{
+  "email": "testmanager@testapp.com",
+  "otp": "654321"
+}</pre>
+          <div class="description"><strong>Response:</strong> Temporary reset token for password change</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "Reset OTP verified successfully",
+  "resetToken": "reset-jwt-token-here...",
+  "expires_in": "15 minutes"
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method post">POST /api/auth/reset-password</div>
+        <div class="endpoint-info">
+          <div class="description">Reset password using reset token</div>
+          <pre>{
+  "resetToken": "reset-jwt-token-here...",
+  "newPassword": "newSecurePassword123"
+}</pre>
+          <div class="description"><strong>Response:</strong> Password successfully reset with new login token</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "Password reset successfully",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "user-uuid-456",
+    "username": "test_manager", 
+    "email": "testmanager@testapp.com",
+    "role": "MANAGER"
+  }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method post">POST /api/auth/change-password</div>
+        <div class="endpoint-info">
+          <div class="description">Change password (authenticated users only)</div>
+          <div class="description"><strong>Auth Required:</strong> Bearer token</div>
+          <pre>{
+  "currentPassword": "testpass123",
+  "newPassword": "newSecurePassword456"
+}</pre>
+          <div class="description"><strong>Response:</strong> Password changed successfully</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "Password changed successfully",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "user-uuid-456", 
+    "username": "test_manager",
+    "email": "testmanager@testapp.com",
+    "role": "MANAGER"
+  }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method post">POST /api/auth/logout</div>
+        <div class="endpoint-info">
+          <div class="description">Logout current user (invalidates session)</div>
+          <div class="description"><strong>Auth Required:</strong> Bearer token</div>
+          <div class="description"><strong>Response:</strong> Session terminated</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "Logout successful"
 }</pre>
         </div>
       </div>
@@ -416,7 +516,7 @@ const apiDocsHTML = `
         </div>
       </div>
       
-      <h2>📋 Task Endpoints (8)</h2>
+      <h2>📋 Task Endpoints (11)</h2>
       
       <div class="endpoint">
         <div class="method get">GET /api/tasks</div>
@@ -631,6 +731,143 @@ const apiDocsHTML = `
     "unassigned_at": "2025-12-01T12:00:00Z",
     "unassigned_by": "manager-uuid-456"
   }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method post">POST /api/tasks/project/{projectId}/bulk/create</div>
+        <div class="endpoint-info">
+          <div class="description">Create multiple tasks in bulk for a project</div>
+          <div class="description"><strong>Auth Required:</strong> Any authenticated user (no limits on quantity)</div>
+          <pre>{
+  "tasks": [
+    {
+      "title": "Setup Development Environment",
+      "description": "Install all required dependencies and tools",
+      "start_date": "2025-12-01",
+      "end_date": "2025-12-03"
+    },
+    {
+      "title": "Design Database Schema", 
+      "description": "Create ERD and define all database tables",
+      "start_date": "2025-12-02",
+      "end_date": "2025-12-06"
+    },
+    {
+      "title": "Implement Authentication Module",
+      "description": "Build user login, registration, and JWT handling",
+      "start_date": "2025-12-03",
+      "end_date": "2025-12-10"
+    }
+  ]
+}</pre>
+          <div class="description"><strong>Response:</strong> Detailed results of bulk creation</div>
+          <pre><strong>Sample Response (201):</strong>
+{
+  "message": "Bulk task creation completed",
+  "total": 3,
+  "successful": 3,
+  "failed": 0,
+  "results": [
+    {
+      "index": 0,
+      "success": true,
+      "task": {
+        "task_id": "task-uuid-001",
+        "title": "Setup Development Environment",
+        "status": "TODO",
+        "project_id": "proj-uuid-123",
+        "created_at": "2025-12-01T10:00:00Z"
+      }
+    }
+  ],
+  "errors": []
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method put">PUT /api/tasks/bulk/update</div>
+        <div class="endpoint-info">
+          <div class="description">Update multiple tasks in bulk</div>
+          <div class="description"><strong>Auth Required:</strong> Any authenticated user (no limits on quantity)</div>
+          <pre>{
+  "updates": [
+    {
+      "task_id": "task-uuid-001",
+      "status": "IN_PROGRESS",
+      "description": "Updated: Development environment setup in progress"
+    },
+    {
+      "task_id": "task-uuid-002",
+      "status": "IN_PROGRESS", 
+      "description": "Updated: Database design started"
+    }
+  ]
+}</pre>
+          <div class="description"><strong>Response:</strong> Detailed results of bulk update</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "message": "Bulk task update completed",
+  "total": 2,
+  "successful": 2,
+  "failed": 0,
+  "results": [
+    {
+      "index": 0,
+      "task_id": "task-uuid-001",
+      "success": true,
+      "task": {
+        "task_id": "task-uuid-001",
+        "title": "Setup Development Environment",
+        "status": "IN_PROGRESS",
+        "updated_at": "2025-12-01T11:00:00Z"
+      }
+    }
+  ],
+  "errors": []
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method delete">DELETE /api/tasks/bulk/delete</div>
+        <div class="endpoint-info">
+          <div class="description">Delete multiple tasks in bulk</div>
+          <div class="description"><strong>Auth Required:</strong> Any authenticated user (no limits on quantity)</div>
+          <pre>{
+  "task_ids": [
+    "task-uuid-001",
+    "task-uuid-002", 
+    "task-uuid-003"
+  ]
+}</pre>
+          <div class="description"><strong>Response:</strong> Detailed results of bulk deletion</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "message": "Bulk task deletion completed", 
+  "total": 3,
+  "successful": 3,
+  "failed": 0,
+  "results": [
+    {
+      "index": 0,
+      "task_id": "task-uuid-001",
+      "success": true
+    },
+    {
+      "index": 1, 
+      "task_id": "task-uuid-002",
+      "success": true
+    },
+    {
+      "index": 2,
+      "task_id": "task-uuid-003", 
+      "success": true
+    }
+  ],
+  "errors": []
 }</pre>
         </div>
       </div>

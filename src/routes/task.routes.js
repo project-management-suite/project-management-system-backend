@@ -243,9 +243,40 @@ router.delete('/:taskId/unassign/:developerId', authorizeRoles('manager', 'admin
  *                     end_date:
  *                       type: string
  *                       format: date
+ *           example:
+ *             tasks:
+ *               - title: "Setup Development Environment"
+ *                 description: "Install all required dependencies and tools"
+ *                 start_date: "2025-12-01"
+ *                 end_date: "2025-12-03"
+ *               - title: "Design Database Schema"
+ *                 description: "Create ERD and define all database tables"
+ *                 start_date: "2025-12-02"
+ *                 end_date: "2025-12-06"
  *     responses:
  *       201:
  *         description: Bulk task creation completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Bulk task creation completed"
+ *                 total:
+ *                   type: integer
+ *                   example: 2
+ *                 successful:
+ *                   type: integer
+ *                   example: 2
+ *                 failed:
+ *                   type: integer
+ *                   example: 0
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
  *       400:
  *         description: Validation errors
  *       403:
@@ -285,9 +316,34 @@ router.post('/project/:projectId/bulk/create', bulkCreateTasks);
  *                     end_date:
  *                       type: string
  *                       format: date
+ *           example:
+ *             updates:
+ *               - task_id: "task-uuid-001"
+ *                 status: "IN_PROGRESS"
+ *                 description: "Updated: Development environment setup in progress"
+ *               - task_id: "task-uuid-002" 
+ *                 status: "COMPLETED"
+ *                 description: "Updated: Database design completed"
  *     responses:
  *       200:
  *         description: Bulk task update completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Bulk task update completed"
+ *                 total:
+ *                   type: integer
+ *                   example: 2
+ *                 successful:
+ *                   type: integer
+ *                   example: 2
+ *                 failed:
+ *                   type: integer
+ *                   example: 0
  *       400:
  *         description: Validation errors
  *       403:
@@ -313,9 +369,31 @@ router.put('/bulk/update', bulkUpdateTasks);
  *                 items:
  *                   type: string
  *                 description: Array of task IDs to delete
+ *           example:
+ *             task_ids:
+ *               - "task-uuid-001"
+ *               - "task-uuid-002"
+ *               - "task-uuid-003"
  *     responses:
  *       200:
  *         description: Bulk task deletion completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Bulk task deletion completed"
+ *                 total:
+ *                   type: integer
+ *                   example: 3
+ *                 successful:
+ *                   type: integer
+ *                   example: 3
+ *                 failed:
+ *                   type: integer
+ *                   example: 0
  *       400:
  *         description: Validation errors
  *       403:
