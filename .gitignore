@@ -23,6 +23,7 @@ coverage/
 # Test results and downloaded files
 test-results/
 test/assets/
+flow-test-results/
 
 # Env files
 .env

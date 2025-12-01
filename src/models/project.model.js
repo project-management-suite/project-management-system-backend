@@ -55,6 +55,16 @@ class Project {
     return data.map(project => new Project(project));
   }
 
+  static async findAll() {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data.map(project => new Project(project));
+  }
+
   static async findByMember(user_id) {
     // For developers, find projects they're assigned to via tasks
     const { data, error } = await supabase

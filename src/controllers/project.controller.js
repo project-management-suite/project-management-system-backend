@@ -25,8 +25,8 @@ exports.getProjects = async (req, res) => {
     let projects;
 
     if (req.user.role === 'ADMIN') {
-      // Admins can see all projects - would need a Project.findAll() method
-      projects = await Project.findByOwner(''); // Placeholder - need to implement findAll
+      // Admins can see all projects
+      projects = await Project.findAll();
     } else if (req.user.role === 'MANAGER') {
       projects = await Project.findByOwner(req.user.user_id);
     } else if (req.user.role === 'DEVELOPER') {
