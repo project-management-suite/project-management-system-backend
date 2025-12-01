@@ -6,6 +6,10 @@
     "test": "node test/test-api.js",
     "test:info": "node test/test-api.js --info",
     "test:help": "node test/test-api.js --help",
+    "test:enterprise": "node test/test-enterprise-features.js",
+    "test:enterprise:verbose": "node test/test-enterprise-features.js --verbose",
+    "test:logic": "node test/test-enterprise-logic.js",
+    "test:logic:verbose": "node test/test-enterprise-logic.js --verbose",
     "seed": "node test/seed-data.js --create-users --verbose",
     "deseed": "node test/deseed-data.js",
     "start": "node server.js",
@@ -15,6 +19,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@faker-js/faker": "^10.1.0",
     "@supabase/supabase-js": "^2.86.0",
     "aws-sdk": "^2.1692.0",
     "bcryptjs": "^3.0.3",

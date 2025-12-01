@@ -6,8 +6,8 @@ const options = {
     openapi: '3.0.0',
     info: {
       title: 'Project Management System API',
-      version: '2.0.0',
-      description: 'A comprehensive project management system API with full work tracking capabilities including tasks, subtasks, estimates, work logging, team management, and reporting. Features 109 endpoints covering authentication, project management, task tracking, time logging, estimation, and administrative functions.',
+      version: '2.1.0',
+      description: 'A comprehensive project management system API with full work tracking capabilities including tasks, subtasks, estimates, work logging, team management, milestones, notifications, deadline reminders, file sharing, and reporting. Features 150+ endpoints covering authentication, project management, task tracking, time logging, estimation, milestone management, notifications, deadline tracking, file sharing, and administrative functions.',
       contact: {
         name: 'API Support',
         email: 'support@projectmanagement.com'
@@ -1291,7 +1291,11 @@ const options = {
       { name: 'Files', description: 'File upload and management' },
       { name: 'Admin', description: 'Administrative functions and user management' },
       { name: 'Calendar', description: 'Calendar and scheduling features' },
-      { name: 'Profile', description: 'User profile management' }
+      { name: 'Profile', description: 'User profile management' },
+      { name: 'Milestones', description: 'Project milestone management and tracking' },
+      { name: 'Notifications', description: 'User notification system and management' },
+      { name: 'DeadlineReminders', description: 'Automated deadline reminder system' },
+      { name: 'FileShares', description: 'File sharing and permission management' }
     ]
   },
   apis: [

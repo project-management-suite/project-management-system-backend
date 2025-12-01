@@ -84,8 +84,8 @@ const apiDocsHTML = `
   <div class="container">
     <div class="header">
       <h1>🚀 Project Management System API</h1>
-      <p>Complete API Documentation - 118 Endpoints</p>
-      <p style="margin: 10px 0; opacity: 0.9;">Authentication • Projects • Tasks • Subtasks • Work Logs • Estimates • Teams • Reports • Files • Calendar • Profiles • Admin</p>
+      <p>Complete API Documentation - 150+ Endpoints</p>
+      <p style="margin: 10px 0; opacity: 0.9;">Authentication • Projects • Tasks • Subtasks • Work Logs • Estimates • Teams • Reports • Files • Calendar • Profiles • Admin • Milestones • Notifications • Deadline Reminders • File Sharing</p>
       <div style="margin: 15px 0;">
         <a href="/api/swagger" style="color: #90cdf4; text-decoration: none; margin: 0 10px;">📚 Interactive Swagger UI</a>
         <a href="/api/docs/swagger.json" style="color: #90cdf4; text-decoration: none; margin: 0 10px;">📄 OpenAPI JSON</a>
@@ -2706,6 +2706,513 @@ const apiDocsHTML = `
         </div>
       </div>
 
+      <h2>🎯 Milestone Endpoints (8)</h2>
+      
+      <div class="endpoint">
+        <div class="method get">GET /api/milestones</div>
+        <div class="endpoint-info">
+          <div class="description">Get all milestones with optional filtering</div>
+          <div class="description"><strong>Query params:</strong> project_id, status, upcoming</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "milestones": [
+    {
+      "milestone_id": "milestone-uuid-123",
+      "project_id": "proj-uuid-123",
+      "milestone_name": "Alpha Release",
+      "description": "First alpha version release",
+      "target_date": "2024-02-01",
+      "status": "IN_PROGRESS",
+      "priority": "HIGH",
+      "completion_percentage": 65,
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "total_count": 1
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method post">POST /api/milestones</div>
+        <div class="endpoint-info">
+          <div class="description">Create a new milestone</div>
+          <pre>{
+  "project_id": "uuid",
+  "milestone_name": "Alpha Release",
+  "description": "First alpha version release",
+  "target_date": "2024-02-01",
+  "priority": "HIGH"
+}</pre>
+          <pre><strong>Sample Response (201):</strong>
+{
+  "success": true,
+  "message": "Milestone created successfully",
+  "milestone": {
+    "milestone_id": "milestone-uuid-456",
+    "project_id": "uuid",
+    "milestone_name": "Alpha Release",
+    "description": "First alpha version release",
+    "target_date": "2024-02-01",
+    "status": "PLANNED",
+    "priority": "HIGH",
+    "completion_percentage": 0,
+    "created_at": "2024-01-20T14:25:00Z"
+  }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method get">GET /api/milestones/:id</div>
+        <div class="endpoint-info">
+          <div class="description">Get milestone by ID with tasks</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "milestone": {
+    "milestone_id": "milestone-uuid-123",
+    "project_id": "proj-uuid-123",
+    "milestone_name": "Beta Release",
+    "description": "Feature-complete beta version",
+    "target_date": "2024-03-15",
+    "status": "IN_PROGRESS",
+    "priority": "HIGH",
+    "completion_percentage": 75,
+    "associated_tasks": [
+      {
+        "task_id": "task-uuid-789",
+        "task_name": "Complete API testing",
+        "status": "COMPLETED"
+      }
+    ],
+    "created_at": "2024-02-01T09:15:00Z"
+  }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method put">PUT /api/milestones/:id</div>
+        <div class="endpoint-info">
+          <div class="description">Update milestone details</div>
+          <pre>{
+  "milestone_name": "Beta Release v2.0",
+  "description": "Enhanced beta with bug fixes",
+  "target_date": "2024-04-01",
+  "status": "IN_PROGRESS",
+  "priority": "CRITICAL"
+}</pre>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "Milestone updated successfully",
+  "milestone": {
+    "milestone_id": "milestone-uuid-123",
+    "milestone_name": "Beta Release v2.0",
+    "description": "Enhanced beta with bug fixes",
+    "target_date": "2024-04-01",
+    "status": "IN_PROGRESS",
+    "priority": "CRITICAL",
+    "completion_percentage": 75,
+    "updated_at": "2024-01-20T18:30:00Z"
+  }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method delete">DELETE /api/milestones/:id</div>
+        <div class="endpoint-info">
+          <div class="description">Delete milestone (Manager/Admin only)</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "Milestone deleted successfully",
+  "deleted_milestone": {
+    "milestone_id": "milestone-uuid-123",
+    "milestone_name": "Cancelled Feature",
+    "deleted_at": "2024-01-20T19:15:00Z"
+  }
+}</pre>
+        </div>
+      </div>
+
+      <h2>🔔 Notification Endpoints (7)</h2>
+      
+      <div class="endpoint">
+        <div class="method get">GET /api/notifications</div>
+        <div class="endpoint-info">
+          <div class="description">Get user's notifications</div>
+          <div class="description"><strong>Query params:</strong> read, type, limit</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "notifications": [
+    {
+      "notification_id": "notif-uuid-123",
+      "recipient_id": "user-uuid-456",
+      "title": "Task Assigned",
+      "message": "You have been assigned task: Complete API documentation",
+      "type": "TASK_ASSIGNMENT",
+      "is_read": false,
+      "created_at": "2024-01-20T15:30:00Z",
+      "metadata": {
+        "task_id": "task-uuid-789",
+        "project_name": "API Documentation Project"
+      }
+    }
+  ],
+  "unread_count": 3,
+  "total_count": 15
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method post">POST /api/notifications</div>
+        <div class="endpoint-info">
+          <div class="description">Create notification (Admin/System)</div>
+          <pre>{
+  "recipient_id": "uuid",
+  "title": "Task Assigned",
+  "message": "You have been assigned a new task",
+  "type": "TASK_ASSIGNMENT"
+}</pre>
+          <pre><strong>Sample Response (201):</strong>
+{
+  "success": true,
+  "message": "Notification created successfully",
+  "notification": {
+    "notification_id": "notif-uuid-789",
+    "recipient_id": "uuid",
+    "title": "Task Assigned",
+    "message": "You have been assigned a new task",
+    "type": "TASK_ASSIGNMENT",
+    "is_read": false,
+    "created_at": "2024-01-20T16:45:00Z"
+  }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method put">PUT /api/notifications/:id/read</div>
+        <div class="endpoint-info">
+          <div class="description">Mark notification as read</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "Notification marked as read",
+  "notification": {
+    "notification_id": "notif-uuid-123",
+    "is_read": true,
+    "read_at": "2024-01-20T17:30:00Z"
+  }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method put">PUT /api/notifications/mark-all-read</div>
+        <div class="endpoint-info">
+          <div class="description">Mark all notifications as read</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "All notifications marked as read",
+  "marked_count": 12,
+  "timestamp": "2024-01-20T17:45:00Z"
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method delete">DELETE /api/notifications/:id</div>
+        <div class="endpoint-info">
+          <div class="description">Delete notification</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "Notification deleted successfully",
+  "deleted_notification": {
+    "notification_id": "notif-uuid-123",
+    "title": "Task Completed",
+    "deleted_at": "2024-01-20T17:50:00Z"
+  }
+}</pre>
+        </div>
+      </div>
+
+      <h2>⏰ Deadline Reminder Endpoints (8)</h2>
+      
+      <div class="endpoint">
+        <div class="method get">GET /api/deadline-reminders</div>
+        <div class="endpoint-info">
+          <div class="description">Get deadline reminders</div>
+          <div class="description"><strong>Query params:</strong> project_id, user_id, active, upcoming</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "reminders": [
+    {
+      "reminder_id": "reminder-uuid-123",
+      "task_id": "task-uuid-456",
+      "task_name": "Complete API testing",
+      "reminder_date": "2024-01-25T09:00:00Z",
+      "reminder_type": "EMAIL",
+      "message": "Task deadline approaching in 2 days",
+      "status": "ACTIVE",
+      "project_name": "API Documentation Project",
+      "days_until_deadline": 2,
+      "created_at": "2024-01-20T10:00:00Z"
+    }
+  ],
+  "total_count": 5,
+  "upcoming_count": 3
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method post">POST /api/deadline-reminders</div>
+        <div class="endpoint-info">
+          <div class="description">Create deadline reminder</div>
+          <pre>{
+  "task_id": "uuid",
+  "reminder_date": "2024-01-25",
+  "reminder_type": "EMAIL",
+  "message": "Task deadline approaching"
+}</pre>
+          <pre><strong>Sample Response (201):</strong>
+{
+  "success": true,
+  "message": "Deadline reminder created successfully",
+  "reminder": {
+    "reminder_id": "reminder-uuid-789",
+    "task_id": "uuid",
+    "reminder_date": "2024-01-25T09:00:00Z",
+    "reminder_type": "EMAIL",
+    "message": "Task deadline approaching",
+    "status": "ACTIVE",
+    "created_at": "2024-01-20T14:30:00Z"
+  }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method get">GET /api/deadline-reminders/:id</div>
+        <div class="endpoint-info">
+          <div class="description">Get specific deadline reminder</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "reminder": {
+    "reminder_id": "reminder-uuid-123",
+    "task_id": "task-uuid-456",
+    "task_name": "Complete user authentication",
+    "reminder_date": "2024-01-25T09:00:00Z",
+    "reminder_type": "EMAIL",
+    "message": "Task deadline approaching in 2 days",
+    "status": "ACTIVE",
+    "project_id": "proj-uuid-789",
+    "project_name": "User Management System",
+    "assignee_id": "user-uuid-101",
+    "assignee_username": "developer_user",
+    "created_at": "2024-01-20T10:00:00Z",
+    "sent_count": 0,
+    "last_sent": null
+  }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method put">PUT /api/deadline-reminders/:id</div>
+        <div class="endpoint-info">
+          <div class="description">Update deadline reminder</div>
+          <pre>{
+  "reminder_date": "2024-01-26T10:00:00Z",
+  "reminder_type": "PUSH_NOTIFICATION",
+  "message": "Updated: Task deadline is tomorrow!",
+  "status": "ACTIVE"
+}</pre>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "Deadline reminder updated successfully",
+  "reminder": {
+    "reminder_id": "reminder-uuid-123",
+    "reminder_date": "2024-01-26T10:00:00Z",
+    "reminder_type": "PUSH_NOTIFICATION",
+    "message": "Updated: Task deadline is tomorrow!",
+    "status": "ACTIVE",
+    "updated_at": "2024-01-20T18:45:00Z"
+  }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method delete">DELETE /api/deadline-reminders/:id</div>
+        <div class="endpoint-info">
+          <div class="description">Delete deadline reminder</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "Deadline reminder deleted successfully",
+  "deleted_reminder": {
+    "reminder_id": "reminder-uuid-123",
+    "task_name": "Complete user authentication",
+    "deleted_at": "2024-01-20T19:30:00Z"
+  }
+}</pre>
+        </div>
+      </div>
+
+      <h2>📤 File Sharing Endpoints (8)</h2>
+      
+      <div class="endpoint">
+        <div class="method get">GET /api/file-shares</div>
+        <div class="endpoint-info">
+          <div class="description">Get shared files</div>
+          <div class="description"><strong>Query params:</strong> shared_with_me, shared_by_me, project_id</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "file_shares": [
+    {
+      "share_id": "share-uuid-123",
+      "file_id": "file-uuid-456",
+      "file_name": "API_Documentation.pdf",
+      "file_size": 2048576,
+      "shared_by_user_id": "user-uuid-789",
+      "shared_by_username": "project_manager",
+      "shared_with_user_id": "user-uuid-101",
+      "shared_with_username": "developer_user",
+      "permission": "READ",
+      "message": "Please review this documentation",
+      "shared_at": "2024-01-20T11:30:00Z",
+      "expires_at": null,
+      "access_count": 3,
+      "project_id": "proj-uuid-123"
+    }
+  ],
+  "total_count": 8
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method post">POST /api/file-shares</div>
+        <div class="endpoint-info">
+          <div class="description">Share a file with users</div>
+          <pre>{
+  "file_id": "uuid",
+  "shared_with_user_ids": ["uuid1", "uuid2"],
+  "permission": "READ",
+  "message": "Please review this document"
+}</pre>
+          <pre><strong>Sample Response (201):</strong>
+{
+  "success": true,
+  "message": "File shared successfully",
+  "file_shares": [
+    {
+      "share_id": "share-uuid-456",
+      "file_id": "uuid",
+      "shared_with_user_id": "uuid1",
+      "permission": "READ",
+      "message": "Please review this document",
+      "shared_at": "2024-01-20T15:45:00Z",
+      "status": "ACTIVE"
+    },
+    {
+      "share_id": "share-uuid-457",
+      "file_id": "uuid",
+      "shared_with_user_id": "uuid2",
+      "permission": "READ",
+      "message": "Please review this document",
+      "shared_at": "2024-01-20T15:45:00Z",
+      "status": "ACTIVE"
+    }
+  ],
+  "shares_created": 2
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method get">GET /api/file-shares/:id</div>
+        <div class="endpoint-info">
+          <div class="description">Get file share details</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "file_share": {
+    "share_id": "share-uuid-123",
+    "file_id": "file-uuid-456",
+    "file_name": "Project_Specification.docx",
+    "file_url": "https://storage.example.com/files/project_spec.docx",
+    "shared_by_user_id": "user-uuid-789",
+    "shared_by_username": "project_manager",
+    "shared_with_user_id": "user-uuid-101",
+    "permission": "EDIT",
+    "message": "Please update the project specifications",
+    "shared_at": "2024-01-20T09:15:00Z",
+    "last_accessed": "2024-01-20T14:30:00Z",
+    "access_count": 5,
+    "status": "ACTIVE",
+    "expires_at": "2024-02-20T09:15:00Z"
+  }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method put">PUT /api/file-shares/:id</div>
+        <div class="endpoint-info">
+          <div class="description">Update file share permissions</div>
+          <pre>{
+  "permission": "EDIT",
+  "expires_at": "2024-02-20",
+  "message": "Updated: Please edit and provide feedback"
+}</pre>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "File share updated successfully",
+  "file_share": {
+    "share_id": "share-uuid-123",
+    "permission": "EDIT",
+    "expires_at": "2024-02-20T23:59:59Z",
+    "message": "Updated: Please edit and provide feedback",
+    "updated_at": "2024-01-20T16:20:00Z"
+  }
+}</pre>
+        </div>
+      </div>
+      
+      <div class="endpoint">
+        <div class="method delete">DELETE /api/file-shares/:id</div>
+        <div class="endpoint-info">
+          <div class="description">Revoke file sharing</div>
+          <pre><strong>Sample Response (200):</strong>
+{
+  "success": true,
+  "message": "File sharing revoked successfully",
+  "revoked_share": {
+    "share_id": "share-uuid-123",
+    "file_name": "Project_Specification.docx",
+    "revoked_at": "2024-01-20T16:45:00Z",
+    "shared_with_username": "developer_user"
+  }
+}</pre>
+        </div>
+      </div>
+
       <h2>🔧 Utility Endpoints</h2>
       
       <div class="endpoint">
@@ -2730,7 +3237,7 @@ const apiDocsHTML = `
       
       <div style="margin-top: 20px; padding: 20px; background: #fed7d7; border-radius: 8px;">
         <h3>📝 Complete Documentation</h3>
-        <p><strong>Total: 109 API Endpoints</strong></p>
+        <p><strong>Total: 150+ API Endpoints</strong></p>
         <p>This page shows key endpoints. For complete interactive documentation with all request/response schemas, examples, and testing capabilities:</p>
         <p>🔗 <strong><a href="/api/swagger" style="color: #2d3748;">Visit Full Swagger UI Documentation</a></strong></p>
         <p>📄 <strong><a href="/api/docs/swagger.json" style="color: #2d3748;">Download OpenAPI JSON Specification</a></strong></p>

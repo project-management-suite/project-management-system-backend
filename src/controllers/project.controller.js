@@ -5,7 +5,7 @@ const { sendProjectNotification } = require('../utils/mailer');
 
 exports.createProject = async (req, res) => {
   try {
-    const { project_name, description } = req.body;
+    const { project_name, description, status, start_date, end_date } = req.body;
 
     if (!project_name) {
       return res.status(400).json({ message: 'Project name is required' });
@@ -14,6 +14,9 @@ exports.createProject = async (req, res) => {
     const project = await Project.create({
       project_name,
       description,
+      status,
+      start_date,
+      end_date,
       owner_manager_id: req.user.user_id
     });
 
@@ -116,5 +119,135 @@ exports.assignMembers = async (req, res) => {
   } catch (error) {
     console.error('Assign members error:', error);
     res.status(500).json({ message: 'Failed to assign members', error: error.message });
+  }
+};
+
+// New status management endpoints
+exports.updateProjectStatus = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        message: 'Status is required',
+        validStatuses: ['PLANNING', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELLED']
+      });
+    }
+
+    const project = await Project.updateStatus(projectId, status);
+
+    res.json({
+      success: true,
+      message: 'Project status updated successfully',
+      project
+    });
+  } catch (error) {
+    console.error('Update project status error:', error);
+    res.status(500).json({ message: 'Failed to update project status', error: error.message });
+  }
+};
+
+exports.updateProjectProgress = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { progress_percentage } = req.body;
+
+    if (progress_percentage === undefined || progress_percentage === null) {
+      return res.status(400).json({ message: 'Progress percentage is required' });
+    }
+
+    const project = await Project.updateProgress(projectId, progress_percentage);
+
+    res.json({
+      success: true,
+      message: 'Project progress updated successfully',
+      project
+    });
+  } catch (error) {
+    console.error('Update project progress error:', error);
+    res.status(500).json({ message: 'Failed to update project progress', error: error.message });
+  }
+};
+
+exports.getProjectStatusAnalytics = async (req, res) => {
+  try {
+    let ownerId = null;
+
+    // Managers only see their own projects, admins see all
+    if (req.user.role === 'MANAGER') {
+      ownerId = req.user.user_id;
+    }
+
+    const analytics = await Project.getStatusAnalytics(ownerId);
+
+    res.json({
+      success: true,
+      analytics
+    });
+  } catch (error) {
+    console.error('Get project status analytics error:', error);
+    res.status(500).json({ message: 'Failed to fetch project analytics', error: error.message });
+  }
+};
+
+exports.getProjectsByStatus = async (req, res) => {
+  try {
+    const { status } = req.params;
+    let ownerId = null;
+
+    // Managers only see their own projects, admins see all
+    if (req.user.role === 'MANAGER') {
+      ownerId = req.user.user_id;
+    }
+
+    const projects = await Project.findByStatus(status, ownerId);
+
+    res.json({
+      success: true,
+      projects,
+      total: projects.length
+    });
+  } catch (error) {
+    console.error('Get projects by status error:', error);
+    res.status(500).json({ message: 'Failed to fetch projects by status', error: error.message });
+  }
+};
+
+exports.getProjectStatusHistory = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    // Check if user has permission to view this project
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // For now, return a simple status history based on project data
+    // In a real implementation, this would come from a status_history table
+    const history = [
+      {
+        status: 'PENDING',
+        changed_at: project.created_at,
+        changed_by: project.owner_manager_id,
+        notes: 'Project created'
+      },
+      {
+        status: project.status || 'PENDING',
+        changed_at: project.updated_at,
+        changed_by: project.owner_manager_id,
+        notes: 'Current status'
+      }
+    ];
+
+    res.json({
+      success: true,
+      project_id: projectId,
+      history
+    });
+  } catch (error) {
+    console.error('Get project status history error:', error);
+    res.status(500).json({ message: 'Failed to fetch project status history', error: error.message });
   }
 };

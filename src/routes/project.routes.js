@@ -10,7 +10,12 @@ const {
   updateProject,
   deleteProject,
   getDashboard,
-  assignMembers
+  assignMembers,
+  updateProjectStatus,
+  updateProjectProgress,
+  getProjectStatusAnalytics,
+  getProjectsByStatus,
+  getProjectStatusHistory
 } = require('../controllers/project.controller');
 
 router.use(authenticate);
@@ -210,5 +215,156 @@ router.delete('/:projectId', authorizeRoles('manager', 'admin'), deleteProject);
  *         description: Project not found
  */
 router.post('/:projectId/assign', authorizeRoles('manager', 'admin'), assignMembers);
+
+/**
+ * @openapi
+ * /api/projects/analytics/status:
+ *   get:
+ *     tags: [Projects]
+ *     summary: Get project status analytics
+ *     responses:
+ *       200:
+ *         description: Project status analytics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 analytics:
+ *                   type: object
+ *                   properties:
+ *                     total_projects:
+ *                       type: integer
+ *                     status_breakdown:
+ *                       type: object
+ *                     average_progress:
+ *                       type: integer
+ *                     overdue_projects:
+ *                       type: integer
+ *                     on_time_percentage:
+ *                       type: integer
+ */
+router.get('/analytics/status', getProjectStatusAnalytics);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}/status-history:
+ *   get:
+ *     tags: [Projects]
+ *     summary: Get project status change history
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Project status history
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 project_id:
+ *                   type: string
+ *                 history:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       status:
+ *                         type: string
+ *                       changed_at:
+ *                         type: string
+ *                       changed_by:
+ *                         type: string
+ *                       notes:
+ *                         type: string
+ *       404:
+ *         description: Project not found
+ */
+router.get('/:projectId/status-history', getProjectStatusHistory);
+
+/**
+ * @openapi
+ * /api/projects/status/{status}:
+ *   get:
+ *     tags: [Projects]
+ *     summary: Get projects by status
+ *     parameters:
+ *       - in: path
+ *         name: status
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [PLANNING, IN_PROGRESS, COMPLETED, ON_HOLD, CANCELLED]
+ *     responses:
+ *       200:
+ *         description: Projects with specified status
+ */
+router.get('/status/:status', getProjectsByStatus);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}/status:
+ *   patch:
+ *     tags: [Projects]
+ *     summary: Update project status
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [PLANNING, IN_PROGRESS, COMPLETED, ON_HOLD, CANCELLED]
+ *     responses:
+ *       200:
+ *         description: Project status updated
+ */
+router.patch('/:projectId/status', authorizeRoles('manager', 'admin'), updateProjectStatus);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}/progress:
+ *   patch:
+ *     tags: [Projects]
+ *     summary: Update project progress
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [progress_percentage]
+ *             properties:
+ *               progress_percentage:
+ *                 type: integer
+ *                 minimum: 0
+ *                 maximum: 100
+ *     responses:
+ *       200:
+ *         description: Project progress updated
+ */
+router.patch('/:projectId/progress', authorizeRoles('manager', 'admin'), updateProjectProgress);
 
 module.exports = router;
