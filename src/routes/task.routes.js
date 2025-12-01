@@ -9,7 +9,10 @@ const {
     getTasks,
     deleteTask,
     assignDeveloper,
-    unassignDeveloper
+    unassignDeveloper,
+    bulkCreateTasks,
+    bulkUpdateTasks,
+    bulkDeleteTasks
 } = require('../controllers/task.controller');
 
 router.use(authenticate);
@@ -84,7 +87,7 @@ router.get('/project/:projectId', getTasks);
  *       404:
  *         description: Project not found
  */
-router.post('/project/:projectId', authorizeRoles('manager', 'admin'), createTask);
+router.post('/project/:projectId', createTask);
 
 /**
  * @openapi
@@ -152,7 +155,7 @@ router.patch('/:taskId', updateTask);
  *       404:
  *         description: Task not found
  */
-router.delete('/:taskId', authorizeRoles('manager', 'admin'), deleteTask);
+router.delete('/:taskId', deleteTask);
 
 /**
  * @openapi
@@ -206,5 +209,118 @@ router.post('/:taskId/assign', authorizeRoles('manager', 'admin'), assignDevelop
  *         description: Assignment not found
  */
 router.delete('/:taskId/unassign/:developerId', authorizeRoles('manager', 'admin'), unassignDeveloper);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}/tasks/bulk/create:
+ *   post:
+ *     tags: [Tasks]
+ *     summary: Create multiple tasks in bulk
+ *     parameters:
+ *       - name: projectId
+ *         in: path
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               tasks:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     title:
+ *                       type: string
+ *                     description:
+ *                       type: string
+ *                     start_date:
+ *                       type: string
+ *                       format: date
+ *                     end_date:
+ *                       type: string
+ *                       format: date
+ *     responses:
+ *       201:
+ *         description: Bulk task creation completed
+ *       400:
+ *         description: Validation errors
+ *       403:
+ *         description: Permission denied
+ */
+router.post('/project/:projectId/bulk/create', bulkCreateTasks);
+
+/**
+ * @openapi
+ * /api/tasks/bulk/update:
+ *   put:
+ *     tags: [Tasks]
+ *     summary: Update multiple tasks in bulk
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               updates:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     task_id:
+ *                       type: string
+ *                     title:
+ *                       type: string
+ *                     description:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                     start_date:
+ *                       type: string
+ *                       format: date
+ *                     end_date:
+ *                       type: string
+ *                       format: date
+ *     responses:
+ *       200:
+ *         description: Bulk task update completed
+ *       400:
+ *         description: Validation errors
+ *       403:
+ *         description: Permission denied
+ */
+router.put('/bulk/update', bulkUpdateTasks);
+
+/**
+ * @openapi
+ * /api/tasks/bulk/delete:
+ *   delete:
+ *     tags: [Tasks]
+ *     summary: Delete multiple tasks in bulk
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               task_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of task IDs to delete
+ *     responses:
+ *       200:
+ *         description: Bulk task deletion completed
+ *       400:
+ *         description: Validation errors
+ *       403:
+ *         description: Permission denied
+ */
+router.delete('/bulk/delete', bulkDeleteTasks);
 
 module.exports = router;

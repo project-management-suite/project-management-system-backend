@@ -7,6 +7,10 @@ exports.createProject = async (req, res) => {
   try {
     const { project_name, description } = req.body;
 
+    if (!project_name) {
+      return res.status(400).json({ message: 'Project name is required' });
+    }
+
     const project = await Project.create({
       project_name,
       description,
