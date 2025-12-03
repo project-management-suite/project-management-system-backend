@@ -8,6 +8,13 @@ class ProjectMember {
         this.member_id = data.member_id;
         this.role = data.role || 'MEMBER';
         this.joined_at = data.joined_at;
+        // Preserve joined data
+        if (data.member) {
+            this.member = data.member;
+        }
+        if (data.project) {
+            this.project = data.project;
+        }
     }
 
     static async addMember(project_id, member_id, role = 'MEMBER') {

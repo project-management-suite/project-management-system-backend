@@ -18,7 +18,9 @@ const {
   getProjectStatusHistory,
   getProjectMembers,
   removeMember,
-  updateMemberRole
+  updateMemberRole,
+  getDeveloperTeams,
+  getDeveloperProjectDetails
 } = require('../controllers/project.controller');
 
 router.use(authenticate);
@@ -471,5 +473,69 @@ router.delete('/:projectId/members/:memberId', authorizeRoles('manager', 'admin'
  *         description: Member role updated successfully
  */
 router.patch('/:projectId/members/:memberId/role', authorizeRoles('manager', 'admin'), updateMemberRole);
+
+/**
+ * @openapi
+ * /api/projects/developer/teams:
+ *   get:
+ *     tags: [Projects]
+ *     summary: Get teams (projects) for current developer
+ *     responses:
+ *       200:
+ *         description: Developer's teams
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user_id:
+ *                   type: string
+ *                 teams:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       team_id:
+ *                         type: string
+ *                       team_name:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       member_count:
+ *                         type: integer
+ *                       is_lead:
+ *                         type: boolean
+ *                       members:
+ *                         type: array
+ */
+router.get('/developer/teams', authorizeRoles('developer'), getDeveloperTeams);
+
+/**
+ * @openapi
+ * /api/projects/developer/{projectId}/details:
+ *   get:
+ *     tags: [Projects]
+ *     summary: Get detailed project information for developer
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Project details for developer
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 project:
+ *                   type: object
+ *                 members:
+ *                   type: array
+ *                 user_tasks:
+ *                   type: array
+ */
+router.get('/developer/:projectId/details', authorizeRoles('developer'), getDeveloperProjectDetails);
 
 module.exports = router;

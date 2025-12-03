@@ -3,6 +3,7 @@ const Project = require('../models/project.model');
 const ProjectMember = require('../models/project-member.model');
 const Task = require('../models/task.model');
 const { sendProjectNotification } = require('../utils/mailer');
+const { supabase } = require('../config/supabase');
 
 exports.createProject = async (req, res) => {
   try {
@@ -357,5 +358,162 @@ exports.updateMemberRole = async (req, res) => {
   } catch (error) {
     console.error('Update member role error:', error);
     res.status(500).json({ message: 'Failed to update member role', error: error.message });
+  }
+};
+
+// Developer-specific endpoints
+exports.getDeveloperTeams = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+
+    // Get all projects where the developer is a member (teams they belong to)
+    const projects = await Project.findByMember(userId);
+
+    // For each project/team, get the team members
+    const teams = [];
+    for (const project of projects) {
+      try {
+        const members = await ProjectMember.getProjectMembers(project.project_id);
+        teams.push({
+          team_id: project.project_id,
+          team_name: project.project_name,
+          description: project.description,
+          created_at: project.created_at,
+          member_count: members.length,
+          members: members.map(m => ({
+            user_id: m.member.user_id,
+            username: m.member.username,
+            email: m.member.email,
+            role: m.member.role,
+            project_role: m.role,
+            joined_at: m.joined_at
+          })),
+          is_lead: members.some(m => m.member.user_id === userId && m.role === 'LEAD')
+        });
+      } catch (memberError) {
+        // If project_members table doesn't exist, fall back to task-based team
+        console.warn(`Could not get members for project ${project.project_id}, falling back to task assignments`);
+        try {
+          const tasksResponse = await Task.findByProject(project.project_id);
+          const teamMembers = new Set();
+
+          tasksResponse.forEach(task => {
+            if (task.assigned_developers) {
+              task.assigned_developers.forEach(dev => {
+                teamMembers.add(JSON.stringify({
+                  user_id: dev.user_id,
+                  username: dev.username,
+                  email: dev.email,
+                  role: dev.role,
+                  project_role: 'MEMBER'
+                }));
+              });
+            }
+          });
+
+          const uniqueMembers = Array.from(teamMembers).map(m => JSON.parse(m));
+          teams.push({
+            team_id: project.project_id,
+            team_name: project.project_name,
+            description: project.description,
+            created_at: project.created_at,
+            member_count: uniqueMembers.length,
+            members: uniqueMembers,
+            is_lead: false
+          });
+        } catch (taskError) {
+          console.error(`Error getting task-based team for project ${project.project_id}:`, taskError);
+        }
+      }
+    }
+
+    res.json({
+      user_id: userId,
+      teams: teams
+    });
+  } catch (error) {
+    console.error('Get developer teams error:', error);
+    res.status(500).json({ message: 'Failed to fetch developer teams', error: error.message });
+  }
+};
+
+exports.getDeveloperProjectDetails = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user.user_id;
+
+    // Check if user has access to this project
+    const userProjects = await Project.findByMember(userId);
+    const hasAccess = userProjects.some(p => p.project_id === projectId);
+
+    if (!hasAccess) {
+      return res.status(403).json({ message: 'You do not have access to this project' });
+    }
+
+    // Get project details
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Get project members
+    let members = [];
+    try {
+      members = await ProjectMember.getProjectMembers(projectId);
+      console.log('Raw members data:', JSON.stringify(members, null, 2));
+    } catch (error) {
+      console.warn('Could not get project members, falling back to task assignments');
+    }
+
+    // Get user's tasks in this project
+    const { data: userTasks, error: tasksError } = await supabase
+      .from('tasks')
+      .select(`
+        *,
+        task_assignments!inner(*)
+      `)
+      .eq('project_id', projectId)
+      .eq('task_assignments.developer_id', userId);
+
+    if (tasksError) {
+      console.error('Error fetching user tasks:', tasksError);
+    }
+
+    // Safely handle member data structures
+    const safeMembers = members.filter(m => m && (m.member || m.user_id));
+    console.log('Safe members after filtering:', JSON.stringify(safeMembers, null, 2));
+
+    const userRole = safeMembers.find(m => {
+      const memberId = m.member?.user_id || m.user_id;
+      return memberId === userId;
+    })?.role || 'MEMBER';
+
+    const safeMembersList = safeMembers.map(m => {
+      // Handle both possible data structures
+      const memberData = m.member || m;
+      return {
+        user_id: memberData.user_id,
+        username: memberData.username,
+        email: memberData.email,
+        role: memberData.role,
+        project_role: m.role || m.project_role || 'MEMBER',
+        joined_at: m.joined_at
+      };
+    }).filter(m => m.user_id); // Filter out any invalid entries
+
+    console.log('Final safe members list:', JSON.stringify(safeMembersList, null, 2));
+
+    res.json({
+      project: {
+        ...project,
+        member_count: safeMembers.length,
+        user_role: userRole
+      },
+      members: safeMembersList,
+      user_tasks: userTasks || []
+    });
+  } catch (error) {
+    console.error('Get developer project details error:', error);
+    res.status(500).json({ message: 'Failed to fetch project details', error: error.message });
   }
 };
