@@ -314,6 +314,127 @@ exports.sendPasswordChangeConfirmationEmail = async (email, username) => {
   return info;
 };
 
+// Send account deletion OTP email
+exports.sendAccountDeletionEmail = async (email, otp, username) => {
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Account Deletion Verification - Project Management System</title>
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: linear-gradient(135deg, #f56565 0%, #c53030 100%);
+          margin: 0;
+          padding: 20px;
+          min-height: 100vh;
+        }
+        .container {
+          max-width: 600px;
+          margin: 0 auto;
+          background: white;
+          border-radius: 10px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+        }
+        .header {
+          background: #c53030;
+          color: white;
+          padding: 30px;
+          text-align: center;
+        }
+        .content {
+          padding: 30px;
+          text-align: center;
+        }
+        .warning-box {
+          background: #fff5f5;
+          border: 2px solid #fc8181;
+          border-radius: 10px;
+          padding: 20px;
+          margin: 20px 0;
+          text-align: left;
+        }
+        .otp-code {
+          font-size: 32px;
+          font-weight: bold;
+          color: #c53030;
+          background: #fff5f5;
+          padding: 20px;
+          border-radius: 10px;
+          margin: 20px 0;
+          letter-spacing: 5px;
+        }
+        .footer {
+          background: #f7fafc;
+          padding: 20px;
+          text-align: center;
+          color: #4a5568;
+          font-size: 14px;
+        }
+        .warning-icon {
+          font-size: 48px;
+          margin: 10px 0;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="warning-icon">⚠️</div>
+          <h1>🚀 Project Management System</h1>
+          <p>Account Deletion Request</p>
+        </div>
+        <div class="content">
+          <h2>Hi ${username},</h2>
+          <p>We received a request to permanently delete your account.</p>
+          
+          <div class="warning-box">
+            <strong style="color: #c53030;">⚠️ WARNING: This action is permanent and cannot be undone!</strong><br><br>
+            <strong>What will be deleted:</strong><br>
+            • Your profile and personal information<br>
+            • All projects you created<br>
+            • All tasks and assignments<br>
+            • All files you uploaded<br>
+            • All work logs and reports<br>
+            • Team memberships and notifications<br><br>
+            <strong>This deletion cannot be reversed!</strong>
+          </div>
+          
+          <p>To confirm this permanent deletion, use the OTP below:</p>
+          
+          <div class="otp-code">${otp}</div>
+          
+          <p><strong>This OTP will expire in 10 minutes.</strong></p>
+          
+          <div class="warning-box">
+            <strong>If you did NOT request this deletion:</strong><br>
+            • Ignore this email - your account will remain safe<br>
+            • Change your password immediately<br>
+            • Contact support if you're concerned about unauthorized access
+          </div>
+        </div>
+        <div class="footer">
+          <p>Project Management System Security Team</p>
+          <p>This is an automated email, please do not reply.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const info = await transporter.sendMail({
+    from: process.env.FROM_EMAIL || `"Project Management System ⚠️" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: '⚠️ Account Deletion Verification - Project Management System',
+    html: html
+  });
+
+  return info;
+};
+
 exports.sendMail = async ({ to, subject, text, html }) => {
   const info = await transporter.sendMail({
     from: process.env.FROM_EMAIL || `"Project Management System" <${process.env.SMTP_USER}>`,

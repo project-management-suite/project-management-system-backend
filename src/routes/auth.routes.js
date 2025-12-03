@@ -10,7 +10,9 @@ const {
     resetPassword,
     changePassword,
     logout,
-    getLastOTPForTesting
+    getLastOTPForTesting,
+    requestAccountDeletion,
+    confirmAccountDeletion
 } = require('../controllers/auth.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
 
@@ -357,6 +359,85 @@ router.post('/change-password', authenticate, changePassword);
  *             schema: { $ref: '#/components/schemas/Error' }
  */
 router.post('/logout', authenticate, logout);
+
+/**
+ * @openapi
+ * /api/auth/delete-account/request:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Request account deletion (sends OTP to email)
+ *     description: Initiates account deletion process by sending a 6-digit OTP to the user's email. This is a permanent action that will delete all user data.
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Account deletion OTP sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       500:
+ *         description: Failed to send OTP
+ */
+router.post('/delete-account/request', authenticate, requestAccountDeletion);
+
+/**
+ * @openapi
+ * /api/auth/delete-account/confirm:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Confirm account deletion with OTP
+ *     description: Permanently deletes the user account after verifying the OTP. This action cannot be undone. All user data including projects, tasks, and files will be removed due to CASCADE deletion.
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [otp]
+ *             properties:
+ *               otp:
+ *                 type: string
+ *                 minLength: 6
+ *                 maxLength: 6
+ *           example:
+ *             otp: "123456"
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Invalid or expired OTP
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       500:
+ *         description: Server error during account deletion
+ */
+router.post('/delete-account/confirm', authenticate, confirmAccountDeletion);
 
 /**
  * @openapi

@@ -151,6 +151,28 @@ class OTPModel {
         if (error) throw error;
     }
 
+    // Store account deletion OTP
+    static async storeAccountDeletionOTP(email, otp) {
+        return this.storeOTP(email, otp, 'ACCOUNT_DELETION');
+    }
+
+    // Verify account deletion OTP
+    static async verifyAccountDeletionOTP(email, otp) {
+        return this.verifyOTP(email, otp, 'ACCOUNT_DELETION');
+    }
+
+    // Mark account deletion OTP as used
+    static async markAccountDeletionOTPAsUsed(email, otp) {
+        const { error } = await supabase
+            .from('email_otps')
+            .update({ used: true })
+            .eq('email', email)
+            .eq('otp', otp)
+            .eq('type', 'ACCOUNT_DELETION');
+
+        if (error) throw error;
+    }
+
     // Clean up expired OTPs (for cleanup jobs)
     static async cleanupExpiredOTPs() {
         const now = new Date().toISOString();

@@ -907,3 +907,170 @@ exports.logout = async (req, res) => {
     });
   }
 };
+
+/**
+ * @swagger
+ * /api/auth/delete-account/request:
+ *   post:
+ *     summary: Request account deletion with OTP
+ *     description: Sends a 6-digit OTP to the user's email for account deletion verification. This is a permanent action that will delete all user data.
+ *     tags: [Authentication]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Account deletion OTP sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Failed to send OTP
+ */
+exports.requestAccountDeletion = async (req, res) => {
+  try {
+    const user = req.user; // From auth middleware
+    const email = user.email;
+    const username = user.username;
+
+    // Generate and store account deletion OTP
+    const deletionOTP = generateOTP();
+    await OTPModel.storeAccountDeletionOTP(email, deletionOTP);
+
+    // Send account deletion email
+    try {
+      // Development/Testing mode: Enhanced OTP logging
+      if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+        console.log('\n' + '='.repeat(60));
+        console.log('⚠️  ACCOUNT DELETION OTP GENERATED');
+        console.log('='.repeat(60));
+        console.log(`📧 Email: ${email}`);
+        console.log(`🔑 Deletion OTP: ${deletionOTP}`);
+        console.log(`⏰ Expires: ${new Date(Date.now() + 10 * 60 * 1000).toLocaleString()}`);
+        console.log(`🔄 Use this OTP to confirm: POST /api/auth/delete-account/confirm`);
+        console.log('='.repeat(60) + '\n');
+
+        // Store OTP in global for testing
+        global.lastAccountDeletionOTP = { email, otp: deletionOTP, timestamp: Date.now() };
+      }
+
+      // Send the OTP email (using existing sendOTPEmail or create a specific deletion email)
+      const { sendAccountDeletionEmail } = require('../utils/mailer');
+      await sendAccountDeletionEmail(email, deletionOTP, username);
+
+      if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+        console.log(`✅ Account deletion email sent successfully to ${email}`);
+      }
+    } catch (emailError) {
+      console.error('Failed to send account deletion email:', emailError);
+      if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
+        return res.status(500).json({ message: 'Failed to send account deletion email' });
+      } else {
+        console.warn(`⚠️  Email service failed, but OTP is available above for testing:`, emailError.message);
+        console.warn(`   Use Deletion OTP: ${deletionOTP} for email: ${email}`);
+      }
+    }
+
+    res.status(200).json({
+      message: 'Account deletion OTP sent to your email. Please verify to permanently delete your account.',
+      email: email
+    });
+  } catch (error) {
+    console.error('Request account deletion error:', error);
+    res.status(500).json({ message: 'Failed to request account deletion', error: error.message });
+  }
+};
+
+/**
+ * @swagger
+ * /api/auth/delete-account/confirm:
+ *   post:
+ *     summary: Confirm account deletion with OTP
+ *     description: Permanently deletes the user account after verifying the OTP. This action cannot be undone. All user data including projects, tasks, and files will be removed due to CASCADE deletion.
+ *     tags: [Authentication]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [otp]
+ *             properties:
+ *               otp:
+ *                 type: string
+ *                 minLength: 6
+ *                 maxLength: 6
+ *           example:
+ *             otp: "123456"
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Invalid or expired OTP
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error during account deletion
+ */
+exports.confirmAccountDeletion = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    const user = req.user; // From auth middleware
+    const email = user.email;
+    const userId = user.user_id;
+
+    if (!otp) {
+      return res.status(400).json({ message: 'OTP is required' });
+    }
+
+    // Verify account deletion OTP
+    const otpResult = await OTPModel.verifyAccountDeletionOTP(email, otp);
+    if (!otpResult.valid) {
+      return res.status(400).json({ message: otpResult.message });
+    }
+
+    // Delete the user from Supabase Auth (this will trigger CASCADE deletion in database)
+    const supabase = require('../config/db');
+
+    try {
+      // Delete from Supabase Auth - this will cascade delete profile and all related data
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+
+      if (authError) {
+        console.error('Supabase auth deletion error:', authError);
+        throw new Error('Failed to delete user from authentication system');
+      }
+
+      console.log(`✅ User account deleted successfully: ${email} (ID: ${userId})`);
+
+      // Mark OTP as used
+      await OTPModel.markAccountDeletionOTPAsUsed(email, otp);
+
+      res.status(200).json({
+        message: 'Account deleted successfully'
+      });
+    } catch (deleteError) {
+      console.error('Account deletion error:', deleteError);
+      throw new Error('Failed to delete account: ' + deleteError.message);
+    }
+  } catch (error) {
+    console.error('Confirm account deletion error:', error);
+    res.status(500).json({ message: 'Account deletion failed', error: error.message });
+  }
+};
