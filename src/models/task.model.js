@@ -11,6 +11,7 @@ class Task {
     this.end_date = data.end_date;
     this.status = data.status;
     this.priority = data.priority;
+    this.progress_percentage = data.progress_percentage;
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
     this.assignments = data.assignments || [];
@@ -105,6 +106,8 @@ class Task {
           start_date,
           end_date,
           status,
+          priority,
+          progress_percentage,
           project:projects(project_name, description)
         )
       `)

@@ -9,6 +9,7 @@ const swaggerSpec = require('../swagger/swaggerDef');
 const authRoutes = require('./routes/auth.routes');
 const projectRoutes = require('./routes/project.routes');
 const taskRoutes = require('./routes/task.routes');
+const commentRoutes = require('./routes/comment.routes');
 const fileRoutes = require('./routes/file.routes');
 const reportRoutes = require('./routes/report.routes');
 const calendarRoutes = require('./routes/calendar.routes');
@@ -75,6 +76,7 @@ app.get('/api/docs/swagger.json', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/comments', commentRoutes);
 app.use('/api/subtasks', subtaskRoutes);
 app.use('/api/worklogs', worklogRoutes);
 app.use('/api/estimates', estimateRoutes);

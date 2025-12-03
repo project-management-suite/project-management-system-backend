@@ -85,25 +85,50 @@ class Team {
      * Get teams for a specific user (as manager or member)
      */
     static async findByUserId(userId) {
-        const { data, error } = await supabase
+        // Get teams where user is manager
+        const { data: managerTeams, error: managerError } = await supabase
             .from('teams')
             .select(`
-        *,
-        manager:profiles!teams_manager_id_fkey(user_id, username, email),
-        team_members!inner(
-          team_member_id,
-          role_in_team,
-          is_active
-        )
-      `)
-            .or(
-                `manager_id.eq.${userId},team_members.user_id.eq.${userId}`
-            )
-            .eq('is_active', true)
-            .eq('team_members.is_active', true);
+                *,
+                manager:profiles!teams_manager_id_fkey(user_id, username, email),
+                team_members(
+                    team_member_id,
+                    role_in_team,
+                    is_active,
+                    user:profiles(user_id, username, email, role)
+                )
+            `)
+            .eq('manager_id', userId)
+            .eq('is_active', true);
 
-        if (error) throw error;
-        return data;
+        if (managerError) throw managerError;
+
+        // Get teams where user is a member
+        const { data: memberTeams, error: memberError } = await supabase
+            .from('teams')
+            .select(`
+                *,
+                manager:profiles!teams_manager_id_fkey(user_id, username, email),
+                team_members!inner(
+                    team_member_id,
+                    role_in_team,
+                    is_active,
+                    user:profiles(user_id, username, email, role)
+                )
+            `)
+            .eq('team_members.user_id', userId)
+            .eq('team_members.is_active', true)
+            .eq('is_active', true);
+
+        if (memberError) throw memberError;
+
+        // Combine and deduplicate teams
+        const allTeams = [...(managerTeams || []), ...(memberTeams || [])];
+        const uniqueTeams = Array.from(
+            new Map(allTeams.map(team => [team.team_id, team])).values()
+        );
+
+        return uniqueTeams;
     }
 
     /**
