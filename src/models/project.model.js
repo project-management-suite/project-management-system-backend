@@ -73,38 +73,69 @@ class Project {
   }
 
   static async findByMember(user_id) {
-    // For developers, find projects they're assigned to via tasks
-    const { data, error } = await supabase
-      .from('projects')
-      .select(`
-        *,
-        tasks!inner(
-          task_id,
-          task_assignments!inner(
-            developer_id
-          )
-        )
-      `)
-      .eq('tasks.task_assignments.developer_id', user_id);
+    try {
+      // Get project IDs from membership (if table exists)
+      let membershipProjectIds = [];
+      try {
+        const { data: membershipData, error: membershipError } = await supabase
+          .from('project_members')
+          .select('project_id')
+          .eq('member_id', user_id);
 
-    if (error) throw error;
-
-    // Remove duplicates and clean up the data
-    const uniqueProjects = {};
-    data.forEach(project => {
-      if (!uniqueProjects[project.project_id]) {
-        uniqueProjects[project.project_id] = {
-          project_id: project.project_id,
-          project_name: project.project_name,
-          description: project.description,
-          owner_manager_id: project.owner_manager_id,
-          created_at: project.created_at,
-          updated_at: project.updated_at
-        };
+        if (membershipError && membershipError.code !== '42P01') { // 42P01 = relation does not exist
+          throw membershipError;
+        }
+        membershipProjectIds = membershipData ? membershipData.map(m => m.project_id) : [];
+      } catch (error) {
+        // If table doesn't exist, continue without membership data
+        if (error.code !== '42P01') {
+          console.warn('Error fetching project membership:', error.message);
+        }
       }
-    });
 
-    return Object.values(uniqueProjects).map(project => new Project(project));
+      // Get project IDs from task assignments
+      const { data: taskAssignments, error: taskError } = await supabase
+        .from('task_assignments')
+        .select('task_id')
+        .eq('developer_id', user_id);
+
+      if (taskError) throw taskError;
+
+      let taskProjectIds = [];
+      if (taskAssignments && taskAssignments.length > 0) {
+        const taskIds = taskAssignments.map(ta => ta.task_id);
+
+        const { data: tasksData, error: tasksError } = await supabase
+          .from('tasks')
+          .select('project_id')
+          .in('task_id', taskIds);
+
+        if (tasksError) throw tasksError;
+        taskProjectIds = tasksData ? tasksData.map(t => t.project_id) : [];
+      }
+
+      // Combine all project IDs and remove duplicates
+      const allProjectIds = [...new Set([...membershipProjectIds, ...taskProjectIds])];
+
+      // If no projects found, return empty array
+      if (allProjectIds.length === 0) {
+        return [];
+      }
+
+      // Fetch all projects
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('*')
+        .in('project_id', allProjectIds)
+        .order('created_at', { ascending: false });
+
+      if (projectsError) throw projectsError;
+
+      return (projectsData || []).map(project => new Project(project));
+    } catch (error) {
+      console.error('Error in findByMember:', error);
+      throw error;
+    }
   }
 
   static async update(project_id, updateData) {

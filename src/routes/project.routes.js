@@ -15,7 +15,10 @@ const {
   updateProjectProgress,
   getProjectStatusAnalytics,
   getProjectsByStatus,
-  getProjectStatusHistory
+  getProjectStatusHistory,
+  getProjectMembers,
+  removeMember,
+  updateMemberRole
 } = require('../controllers/project.controller');
 
 router.use(authenticate);
@@ -366,5 +369,107 @@ router.patch('/:projectId/status', authorizeRoles('manager', 'admin'), updatePro
  *         description: Project progress updated
  */
 router.patch('/:projectId/progress', authorizeRoles('manager', 'admin'), updateProjectProgress);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}/members:
+ *   get:
+ *     tags: [Projects]
+ *     summary: Get project members
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Project members list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 project_id:
+ *                   type: string
+ *                 members:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       membership_id:
+ *                         type: string
+ *                       member_id:
+ *                         type: string
+ *                       role:
+ *                         type: string
+ *                         enum: [MEMBER, LEAD]
+ *                       joined_at:
+ *                         type: string
+ *                       member:
+ *                         type: object
+ *                         properties:
+ *                           user_id:
+ *                             type: string
+ *                           username:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                           role:
+ *                             type: string
+ */
+router.get('/:projectId/members', getProjectMembers);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}/members/{memberId}:
+ *   delete:
+ *     tags: [Projects]
+ *     summary: Remove member from project
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: memberId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Member removed successfully
+ */
+router.delete('/:projectId/members/:memberId', authorizeRoles('manager', 'admin'), removeMember);
+
+/**
+ * @openapi
+ * /api/projects/{projectId}/members/{memberId}/role:
+ *   patch:
+ *     tags: [Projects]
+ *     summary: Update member role in project
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: memberId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [role]
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [MEMBER, LEAD]
+ *     responses:
+ *       200:
+ *         description: Member role updated successfully
+ */
+router.patch('/:projectId/members/:memberId/role', authorizeRoles('manager', 'admin'), updateMemberRole);
 
 module.exports = router;

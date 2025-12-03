@@ -1,5 +1,6 @@
 // src/controllers/project.controller.js
 const Project = require('../models/project.model');
+const ProjectMember = require('../models/project-member.model');
 const Task = require('../models/task.model');
 const { sendProjectNotification } = require('../utils/mailer');
 
@@ -106,18 +107,39 @@ exports.getDashboard = async (req, res) => {
   }
 };
 
-// Legacy method - keeping for compatibility but will need implementation
 exports.assignMembers = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { memberIds } = req.body;
+    const { memberIds, role = 'MEMBER' } = req.body;
 
-    // This would need to be implemented if we want project-level member assignments
-    // For now, members are assigned via tasks
+    if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+      return res.status(400).json({ message: 'memberIds array is required' });
+    }
 
-    res.json({ message: 'Members are assigned via task assignments' });
+    // Check if project exists and user has permission
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Verify user is the project manager or admin
+    if (req.user.role !== 'ADMIN' && project.owner_manager_id !== req.user.user_id) {
+      return res.status(403).json({ message: 'Only project managers and admins can assign members' });
+    }
+
+    // Add members to project
+    const results = await ProjectMember.bulkAddMembers(projectId, memberIds, role);
+
+    res.status(201).json({
+      message: 'Members assigned successfully',
+      members: results,
+      project_id: projectId
+    });
   } catch (error) {
     console.error('Assign members error:', error);
+    if (error.message === 'Developer is already a member of this project') {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ message: 'Failed to assign members', error: error.message });
   }
 };
@@ -249,5 +271,91 @@ exports.getProjectStatusHistory = async (req, res) => {
   } catch (error) {
     console.error('Get project status history error:', error);
     res.status(500).json({ message: 'Failed to fetch project status history', error: error.message });
+  }
+};
+
+// Project member management endpoints
+exports.getProjectMembers = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    // Check if project exists
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const members = await ProjectMember.getProjectMembers(projectId);
+
+    res.json({
+      project_id: projectId,
+      members: members
+    });
+  } catch (error) {
+    console.error('Get project members error:', error);
+    res.status(500).json({ message: 'Failed to fetch project members', error: error.message });
+  }
+};
+
+exports.removeMember = async (req, res) => {
+  try {
+    const { projectId, memberId } = req.params;
+
+    // Check if project exists and user has permission
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Verify user is the project manager or admin
+    if (req.user.role !== 'ADMIN' && project.owner_manager_id !== req.user.user_id) {
+      return res.status(403).json({ message: 'Only project managers and admins can remove members' });
+    }
+
+    await ProjectMember.removeMember(projectId, memberId);
+
+    res.json({
+      message: 'Member removed successfully',
+      project_id: projectId,
+      member_id: memberId
+    });
+  } catch (error) {
+    console.error('Remove member error:', error);
+    res.status(500).json({ message: 'Failed to remove member', error: error.message });
+  }
+};
+
+exports.updateMemberRole = async (req, res) => {
+  try {
+    const { projectId, memberId } = req.params;
+    const { role } = req.body;
+
+    if (!role || !['MEMBER', 'LEAD'].includes(role)) {
+      return res.status(400).json({
+        message: 'Valid role is required',
+        validRoles: ['MEMBER', 'LEAD']
+      });
+    }
+
+    // Check if project exists and user has permission
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Verify user is the project manager or admin
+    if (req.user.role !== 'ADMIN' && project.owner_manager_id !== req.user.user_id) {
+      return res.status(403).json({ message: 'Only project managers and admins can update member roles' });
+    }
+
+    const updatedMember = await ProjectMember.updateMemberRole(projectId, memberId, role);
+
+    res.json({
+      message: 'Member role updated successfully',
+      member: updatedMember
+    });
+  } catch (error) {
+    console.error('Update member role error:', error);
+    res.status(500).json({ message: 'Failed to update member role', error: error.message });
   }
 };
