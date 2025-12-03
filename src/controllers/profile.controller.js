@@ -44,10 +44,8 @@ exports.getProfile = async (req, res) => {
     try {
         const userId = req.params.userId || req.user.user_id;
 
-        // Check if user can view this profile
-        if (userId !== req.user.user_id && req.user.role !== 'ADMIN') {
-            return res.status(403).json({ error: 'Access denied to this profile' });
-        }
+        // Allow all authenticated users to view any profile
+        // This enables team collaboration features like profile popovers
 
         const { data: profile, error } = await supabase
             .from('profiles')
