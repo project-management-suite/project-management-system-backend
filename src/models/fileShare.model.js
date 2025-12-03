@@ -31,10 +31,10 @@ class FileShare {
           task:tasks(task_id, title)
         ),
         shared_with:profiles!file_shares_shared_with_user_id_fkey(
-          user_id, first_name, last_name, email, username
+          user_id, username, email
         ),
         shared_by:profiles!file_shares_shared_by_user_id_fkey(
-          user_id, first_name, last_name, email, username
+          user_id, username, email
         )
       `)
             .single();
@@ -68,7 +68,7 @@ class FileShare {
         *,
         file:files(file_id, file_name, file_size),
         shared_with:profiles!file_shares_shared_with_user_id_fkey(
-          user_id, first_name, last_name, email
+          user_id, username, email
         )
       `);
 
@@ -94,13 +94,13 @@ class FileShare {
         file:files(
           file_id, file_name, file_size, mime_type, upload_date,
           uploader:profiles!files_uploaded_by_user_id_fkey(
-            user_id, first_name, last_name, username
+            user_id, username
           ),
           project:projects(project_id, project_name),
           task:tasks(task_id, title)
         ),
         shared_by:profiles!file_shares_shared_by_user_id_fkey(
-          user_id, first_name, last_name, username
+          user_id, username
         )
       `)
             .eq('shared_with_user_id', userId)
@@ -136,7 +136,7 @@ class FileShare {
         *,
         file:files(file_id, file_name, file_size, mime_type, upload_date),
         shared_with:profiles!file_shares_shared_with_user_id_fkey(
-          user_id, first_name, last_name, email, username
+          user_id, username, email
         )
       `)
             .eq('shared_by_user_id', userId)
@@ -156,10 +156,10 @@ class FileShare {
             .select(`
         *,
         shared_with:profiles!file_shares_shared_with_user_id_fkey(
-          user_id, first_name, last_name, email, username
+          user_id, username, email
         ),
         shared_by:profiles!file_shares_shared_by_user_id_fkey(
-          user_id, first_name, last_name, username
+          user_id, username
         )
       `)
             .eq('file_id', fileId)
@@ -235,7 +235,7 @@ class FileShare {
         *,
         file:files(file_id, file_name),
         shared_with:profiles!file_shares_shared_with_user_id_fkey(
-          user_id, first_name, last_name, email
+          user_id, username, email
         )
       `)
             .single();
@@ -417,7 +417,7 @@ class FileShare {
             .select(`
         *,
         shared_with:profiles!file_shares_shared_with_user_id_fkey(
-          user_id, first_name, last_name, email
+          user_id, username, email
         )
       `);
 

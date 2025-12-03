@@ -62,7 +62,7 @@ exports.startScheduledJobs = () => {
               subject: `Task Deadline Reminder: ${reminder.tasks.title}`,
               html: `
                 <h2>Task Deadline Reminder</h2>
-                <p>Hello ${reminder.profiles.first_name} ${reminder.profiles.last_name},</p>
+                <p>Hello ${reminder.profiles.username},</p>
                 <p>This is a reminder that your task "<strong>${reminder.tasks.title}</strong>" is due on <strong>${new Date(reminder.tasks.end_date).toLocaleDateString()}</strong>.</p>
                 <p><strong>Project:</strong> ${reminder.tasks.projects?.project_name || 'Unknown Project'}</p>
                 <p><strong>Priority:</strong> ${reminder.tasks.priority}</p>

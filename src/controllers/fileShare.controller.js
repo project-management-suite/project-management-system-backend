@@ -43,7 +43,7 @@ exports.shareFile = async (req, res) => {
         await Notification.create({
             user_id: shared_with_user_id,
             title: 'File Shared With You',
-            message: `${req.user.first_name} ${req.user.last_name} shared a file "${share.file.file_name}" with you`,
+            message: `${req.user.username} shared a file "${share.file.file_name}" with you`,
             type: 'PROJECT_UPDATED',
             related_entity_type: 'file',
             related_entity_id: file_id
@@ -106,7 +106,7 @@ exports.shareBulkFiles = async (req, res) => {
             notifications.push({
                 user_id,
                 title: 'Files Shared With You',
-                message: `${req.user.first_name} ${req.user.last_name} shared ${file_ids.length} file(s) with you`,
+                message: `${req.user.username} shared ${file_ids.length} file(s) with you`,
                 type: 'PROJECT_UPDATED'
             });
         }

@@ -178,16 +178,26 @@ exports.getProjectFiles = async (req, res) => {
     const isAdmin = req.user.role === 'ADMIN';
 
     if (!isManager && !isAdmin) {
-      const { data: assignment } = await supabase
-        .from('task_assignments')
-        .select('assignment_id')
-        .eq('developer_id', userId)
-        .in('task_id',
-          supabase.from('tasks').select('task_id').eq('project_id', project_id)
-        )
-        .limit(1);
+      // First get task IDs for the project
+      const { data: projectTasks } = await supabase
+        .from('tasks')
+        .select('task_id')
+        .eq('project_id', project_id);
 
-      if (!assignment || assignment.length === 0) {
+      const taskIds = projectTasks ? projectTasks.map(task => task.task_id) : [];
+
+      if (taskIds.length > 0) {
+        const { data: assignment } = await supabase
+          .from('task_assignments')
+          .select('assignment_id')
+          .eq('developer_id', userId)
+          .in('task_id', taskIds)
+          .limit(1);
+
+        if (!assignment || assignment.length === 0) {
+          return res.status(403).json({ error: 'Access denied to this project' });
+        }
+      } else {
         return res.status(403).json({ error: 'Access denied to this project' });
       }
     }

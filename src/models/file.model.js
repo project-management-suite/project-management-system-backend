@@ -44,8 +44,11 @@ class File {
       .eq('project_id', project_id)
       .order('upload_date', { ascending: false });
 
-    if (error) throw error;
-    return data.map(file => new File(file));
+    if (error) {
+      console.error('Error fetching project files:', error);
+      throw error;
+    }
+    return data ? data.map(file => new File(file)) : [];
   }
 
   static async findByTask(task_id) {
