@@ -10,12 +10,13 @@ class Task {
     this.start_date = data.start_date;
     this.end_date = data.end_date;
     this.status = data.status;
+    this.priority = data.priority;
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
     this.assignments = data.assignments || [];
   }
 
-  static async create({ project_id, title, description, start_date, end_date, status = 'NEW' }) {
+  static async create({ project_id, title, description, start_date, end_date, status = 'NEW', priority = 'MEDIUM' }) {
     const { data, error } = await supabase
       .from('tasks')
       .insert({
@@ -24,7 +25,8 @@ class Task {
         description,
         start_date,
         end_date,
-        status
+        status,
+        priority
       })
       .select()
       .single();
@@ -305,6 +307,32 @@ class Task {
     stats.remainingHours = Math.max(stats.estimatedHours - stats.actualHours, 0);
 
     return stats;
+  }
+
+  // Update task priority (managers only)
+  static async updatePriority(taskId, priority) {
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({ priority })
+      .eq('task_id', taskId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return new Task(data);
+  }
+
+  // Update task status (managers and developers)
+  static async updateStatus(taskId, status) {
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({ status })
+      .eq('task_id', taskId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return new Task(data);
   }
 }
 
