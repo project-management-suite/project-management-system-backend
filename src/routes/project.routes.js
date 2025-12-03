@@ -107,6 +107,51 @@ router.get('/developers', authorizeRoles('manager', 'admin'), async (req, res) =
 
 /**
  * @openapi
+ * /api/projects/users:
+ *   get:
+ *     tags: [Projects]
+ *     summary: Get all users for file sharing (accessible by all authenticated users)
+ *     responses:
+ *       200:
+ *         description: List of all users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       user_id:
+ *                         type: string
+ *                       username:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       role:
+ *                         type: string
+ */
+router.get('/users', async (req, res) => {
+  try {
+    const { supabase } = require('../config/supabase');
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('user_id, username, email, role')
+      .order('username', { ascending: true });
+
+    if (error) throw error;
+
+    res.json({ users: data || [] });
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({ message: 'Failed to fetch users', error: error.message });
+  }
+});
+
+/**
+ * @openapi
  * /api/projects:
  *   post:
  *     tags: [Projects]

@@ -44,6 +44,34 @@ class FileShare {
     }
 
     /**
+     * Check if a file is already shared with a specific user
+     */
+    static async getExistingShare(fileId, sharedWithUserId) {
+        const { data, error } = await supabase
+            .from('file_shares')
+            .select(`
+                *,
+                file:files(
+                    file_id, file_name, file_size, mime_type, upload_date,
+                    project:projects(project_id, project_name),
+                    task:tasks(task_id, title)
+                ),
+                shared_with:profiles!file_shares_shared_with_user_id_fkey(
+                    user_id, username, email
+                ),
+                shared_by:profiles!file_shares_shared_by_user_id_fkey(
+                    user_id, username, email
+                )
+            `)
+            .eq('file_id', fileId)
+            .eq('shared_with_user_id', sharedWithUserId)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
+        return data;
+    }
+
+    /**
      * Share multiple files with multiple users
      */
     static async shareBulkFiles(bulkShareData) {

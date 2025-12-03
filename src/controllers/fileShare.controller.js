@@ -1,7 +1,7 @@
 // src/controllers/fileShare.controller.js
 const FileShare = require('../models/fileShare.model');
 const { sendEmail } = require('../utils/mailer');
-const Notification = require('../models/notification.model');
+const { Notification } = require('../models/notification.model');
 const { supabase } = require('../config/supabase');
 
 /**
@@ -29,6 +29,19 @@ exports.shareFile = async (req, res) => {
         if (!fileAccess.hasAccess) {
             return res.status(403).json({
                 error: 'You do not have permission to share this file'
+            });
+        }
+
+        // Check if file is already shared with this user
+        const existingShare = await FileShare.getExistingShare(file_id, shared_with_user_id);
+
+        if (existingShare) {
+            // File is already shared, return the existing share
+            return res.status(200).json({
+                success: true,
+                message: 'File is already shared with this user',
+                share: existingShare,
+                isExisting: true
             });
         }
 
