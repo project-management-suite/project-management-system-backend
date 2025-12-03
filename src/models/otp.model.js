@@ -173,6 +173,36 @@ class OTPModel {
         if (error) throw error;
     }
 
+    // Get existing account deletion OTP (for resend)
+    static async getAccountDeletionOTP(email) {
+        const { data, error } = await supabase
+            .from('email_otps')
+            .select('*')
+            .eq('email', email)
+            .eq('type', 'ACCOUNT_DELETION')
+            .eq('used', false)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (error || !data) return null;
+
+        // Check if OTP is expired
+        const now = new Date();
+        const expiresAt = new Date(data.expires_at);
+
+        if (now > expiresAt) {
+            return null; // Expired
+        }
+
+        return {
+            otp: data.otp,
+            created_at: data.created_at,
+            expires_at: data.expires_at,
+            email: data.email
+        };
+    }
+
     // Clean up expired OTPs (for cleanup jobs)
     static async cleanupExpiredOTPs() {
         const now = new Date().toISOString();

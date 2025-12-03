@@ -990,6 +990,93 @@ exports.requestAccountDeletion = async (req, res) => {
 
 /**
  * @swagger
+ * /api/auth/delete-account/resend:
+ *   post:
+ *     summary: Resend account deletion OTP
+ *     description: Resends the existing account deletion OTP to the user's email. If no valid OTP exists, generates a new one.
+ *     tags: [Authentication]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: OTP resent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Failed to resend OTP
+ */
+exports.resendAccountDeletionOTP = async (req, res) => {
+  try {
+    const user = req.user; // From auth middleware
+    const email = user.email;
+    const username = user.username;
+
+    // Try to get existing OTP first
+    let existingOTP = await OTPModel.getAccountDeletionOTP(email);
+    let otpToSend;
+
+    if (existingOTP && existingOTP.otp) {
+      // Resend existing OTP
+      otpToSend = existingOTP.otp;
+      console.log(`♻️  Resending existing account deletion OTP for ${email}`);
+    } else {
+      // Generate new OTP if none exists or expired
+      otpToSend = generateOTP();
+      await OTPModel.storeAccountDeletionOTP(email, otpToSend);
+      console.log(`🔑 Generated new account deletion OTP for ${email}`);
+    }
+
+    // Send email with the OTP
+    try {
+      if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+        console.log('\n' + '='.repeat(60));
+        console.log('♻️  RESENDING ACCOUNT DELETION OTP');
+        console.log('='.repeat(60));
+        console.log(`📧 Email: ${email}`);
+        console.log(`🔑 Deletion OTP: ${otpToSend}`);
+        console.log(`⏰ Valid for: 10 minutes`);
+        console.log('='.repeat(60) + '\n');
+
+        global.lastAccountDeletionOTP = { email, otp: otpToSend, timestamp: Date.now() };
+      }
+
+      const { sendAccountDeletionEmail } = require('../utils/mailer');
+      await sendAccountDeletionEmail(email, otpToSend, username);
+
+      if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+        console.log(`✅ Account deletion OTP resent successfully to ${email}`);
+      }
+    } catch (emailError) {
+      console.error('Failed to resend account deletion email:', emailError);
+      if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
+        return res.status(500).json({ message: 'Failed to resend account deletion email' });
+      } else {
+        console.warn(`⚠️  Email service failed, but OTP is available above for testing:`, emailError.message);
+        console.warn(`   Use Deletion OTP: ${otpToSend} for email: ${email}`);
+      }
+    }
+
+    res.status(200).json({
+      message: 'Account deletion OTP resent to your email.',
+      email: email
+    });
+  } catch (error) {
+    console.error('Resend account deletion OTP error:', error);
+    res.status(500).json({ message: 'Failed to resend OTP', error: error.message });
+  }
+};
+
+/**
+ * @swagger
  * /api/auth/delete-account/confirm:
  *   post:
  *     summary: Confirm account deletion with OTP

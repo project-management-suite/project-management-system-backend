@@ -12,6 +12,7 @@ const {
     logout,
     getLastOTPForTesting,
     requestAccountDeletion,
+    resendAccountDeletionOTP,
     confirmAccountDeletion
 } = require('../controllers/auth.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
@@ -390,6 +391,37 @@ router.post('/logout', authenticate, logout);
  *         description: Failed to send OTP
  */
 router.post('/delete-account/request', authenticate, requestAccountDeletion);
+
+/**
+ * @openapi
+ * /api/auth/delete-account/resend:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Resend account deletion OTP
+ *     description: Resends the existing account deletion OTP to user's email. Sends the same OTP if still valid, or generates a new one if expired.
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: OTP resent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       500:
+ *         description: Failed to resend OTP
+ */
+router.post('/delete-account/resend', authenticate, resendAccountDeletionOTP);
 
 /**
  * @openapi
