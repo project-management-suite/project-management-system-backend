@@ -15,6 +15,8 @@ const {
     bulkDeleteTasks,
     getTaskSubtasks,
     createSubtask,
+    updateSubtask,
+    deleteSubtask,
     getTaskWorkLogs,
     createWorkLog,
     getTaskEstimates,
@@ -141,8 +143,30 @@ router.get('/:taskId', getTask);
  *             schema: { $ref: '#/components/schemas/Task' }
  *       404:
  *         description: Task not found
+ *   put:
+ *     tags: [Tasks]
+ *     summary: Update task
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/UpdateTaskInput' }
+ *     responses:
+ *       200:
+ *         description: Updated
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Task' }
+ *       404:
+ *         description: Task not found
  */
 router.patch('/:taskId', updateTask);
+router.put('/:taskId', updateTask);
 
 /**
  * @openapi
@@ -484,6 +508,63 @@ router.get('/:taskId/subtasks', getTaskSubtasks);
  *         description: Task not found
  */
 router.post('/:taskId/subtasks', createSubtask);
+
+/**
+ * @openapi
+ * /api/tasks/subtasks/{subtaskId}:
+ *   put:
+ *     tags: [Tasks - Subtasks]
+ *     summary: Update a subtask (all authenticated users)
+ *     parameters:
+ *       - in: path
+ *         name: subtaskId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [PENDING, IN_PROGRESS, COMPLETED, CANCELLED]
+ *               priority:
+ *                 type: string
+ *                 enum: [LOW, MEDIUM, HIGH, URGENT]
+ *               estimated_hours:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Subtask updated
+ *       404:
+ *         description: Subtask not found
+ */
+router.put('/subtasks/:subtaskId', updateSubtask);
+
+/**
+ * @openapi
+ * /api/tasks/subtasks/{subtaskId}:
+ *   delete:
+ *     tags: [Tasks - Subtasks]
+ *     summary: Delete a subtask (all authenticated users)
+ *     parameters:
+ *       - in: path
+ *         name: subtaskId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Subtask deleted successfully
+ *       404:
+ *         description: Subtask not found
+ */
+router.delete('/subtasks/:subtaskId', deleteSubtask);
 
 /**
  * @openapi

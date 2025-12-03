@@ -437,6 +437,51 @@ exports.createSubtask = async (req, res) => {
   }
 };
 
+exports.updateSubtask = async (req, res) => {
+  try {
+    const { subtaskId } = req.params;
+    const { title, description, status, priority, estimated_hours } = req.body;
+
+    // Verify subtask exists
+    const subtask = await Task.findSubtaskById(subtaskId);
+    if (!subtask) {
+      return res.status(404).json({ message: 'Subtask not found' });
+    }
+
+    const updatedSubtask = await Task.updateSubtask(subtaskId, {
+      title,
+      description,
+      status,
+      priority,
+      estimated_hours
+    });
+
+    res.json(updatedSubtask);
+  } catch (error) {
+    console.error('Update subtask error:', error);
+    res.status(500).json({ message: 'Failed to update subtask', error: error.message });
+  }
+};
+
+exports.deleteSubtask = async (req, res) => {
+  try {
+    const { subtaskId } = req.params;
+
+    // Verify subtask exists
+    const subtask = await Task.findSubtaskById(subtaskId);
+    if (!subtask) {
+      return res.status(404).json({ message: 'Subtask not found' });
+    }
+
+    await Task.deleteSubtask(subtaskId);
+
+    res.json({ message: 'Subtask deleted successfully' });
+  } catch (error) {
+    console.error('Delete subtask error:', error);
+    res.status(500).json({ message: 'Failed to delete subtask', error: error.message });
+  }
+};
+
 // Work Logs Management
 
 exports.getTaskWorkLogs = async (req, res) => {

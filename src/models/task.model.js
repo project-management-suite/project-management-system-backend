@@ -407,6 +407,41 @@ class Task {
     return data;
   }
 
+  static async updateSubtask(subtaskId, updates) {
+    const { data, error } = await supabase
+      .from('subtasks')
+      .update(updates)
+      .eq('subtask_id', subtaskId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async deleteSubtask(subtaskId) {
+    // Delete subtask assignments first
+    await supabase
+      .from('subtask_assignments')
+      .delete()
+      .eq('subtask_id', subtaskId);
+
+    // Delete work logs for this subtask
+    await supabase
+      .from('work_logs')
+      .delete()
+      .eq('subtask_id', subtaskId);
+
+    // Delete the subtask
+    const { error } = await supabase
+      .from('subtasks')
+      .delete()
+      .eq('subtask_id', subtaskId);
+
+    if (error) throw error;
+    return true;
+  }
+
   static async assignSubtaskDevelopers(subtaskId, assigneeIds, assignedBy) {
     const assignments = assigneeIds.map(assigneeId => ({
       subtask_id: subtaskId,
