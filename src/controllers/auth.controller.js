@@ -1133,7 +1133,7 @@ exports.confirmAccountDeletion = async (req, res) => {
     }
 
     // Delete the user from Supabase Auth (this will trigger CASCADE deletion in database)
-    const supabase = require('../config/db');
+    const { supabase } = require('../config/supabase');
 
     try {
       // Delete from Supabase Auth - this will cascade delete profile and all related data
