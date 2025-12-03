@@ -58,6 +58,12 @@ exports.getProfile = async (req, res) => {
         role,
         profile_photo_url,
         profile_photo_uploaded_at,
+        phone,
+        address,
+        bio,
+        department,
+        position,
+        join_date,
         created_at,
         updated_at
       `)
@@ -79,6 +85,60 @@ exports.getProfile = async (req, res) => {
     } catch (error) {
         console.error('Get profile error:', error);
         res.status(500).json({ error: 'Failed to retrieve profile' });
+    }
+};
+
+/**
+ * Update user profile data (phone, address, bio, department, position, join_date)
+ */
+exports.updateProfile = async (req, res) => {
+    try {
+        const userId = req.user.user_id;
+        const { phone, address, bio, department, position, join_date } = req.body;
+
+        // Build update object with only provided fields
+        const updateData = {};
+        if (phone !== undefined) updateData.phone = phone;
+        if (address !== undefined) updateData.address = address;
+        if (bio !== undefined) updateData.bio = bio;
+        if (department !== undefined) updateData.department = department;
+        if (position !== undefined) updateData.position = position;
+        if (join_date !== undefined) updateData.join_date = join_date;
+
+        // Always update the updated_at timestamp
+        updateData.updated_at = new Date().toISOString();
+
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .update(updateData)
+            .eq('user_id', userId)
+            .select(`
+                user_id,
+                username,
+                email,
+                role,
+                profile_photo_url,
+                phone,
+                address,
+                bio,
+                department,
+                position,
+                join_date,
+                updated_at
+            `)
+            .single();
+
+        if (error) throw error;
+
+        res.json({
+            success: true,
+            message: 'Profile updated successfully',
+            profile
+        });
+
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
     }
 };
 

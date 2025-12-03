@@ -27,7 +27,7 @@ class ProjectMember {
             })
             .select(`
         *,
-        member:profiles!project_members_member_id_fkey(user_id, username, email, role)
+        member:profiles!project_members_member_id_fkey(user_id, username, email, role, profile_photo_url)
       `)
             .single();
 
@@ -58,7 +58,7 @@ class ProjectMember {
             .from('project_members')
             .select(`
         *,
-        member:profiles!project_members_member_id_fkey(user_id, username, email, role)
+        member:profiles!project_members_member_id_fkey(user_id, username, email, role, profile_photo_url)
       `)
             .eq('project_id', project_id)
             .order('joined_at', { ascending: true });
@@ -89,7 +89,7 @@ class ProjectMember {
             .eq('member_id', member_id)
             .select(`
         *,
-        member:profiles!project_members_member_id_fkey(user_id, username, email, role)
+        member:profiles!project_members_member_id_fkey(user_id, username, email, role, profile_photo_url)
       `)
             .single();
 
@@ -124,7 +124,7 @@ class ProjectMember {
             })
             .select(`
         *,
-        member:profiles!project_members_member_id_fkey(user_id, username, email, role)
+        member:profiles!project_members_member_id_fkey(user_id, username, email, role, profile_photo_url)
       `);
 
         if (error) throw error;

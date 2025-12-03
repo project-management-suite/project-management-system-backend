@@ -52,6 +52,57 @@ router.get('/', profileController.getProfile);
 
 /**
  * @openapi
+ * /api/profile:
+ *   put:
+ *     tags: [Profile]
+ *     summary: Update current user profile data
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 nullable: true
+ *               address:
+ *                 type: string
+ *                 nullable: true
+ *               bio:
+ *                 type: string
+ *                 nullable: true
+ *               department:
+ *                 type: string
+ *                 nullable: true
+ *               position:
+ *                 type: string
+ *                 nullable: true
+ *               join_date:
+ *                 type: string
+ *                 format: date
+ *                 nullable: true
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 profile:
+ *                   type: object
+ *       500:
+ *         description: Update failed
+ */
+router.put('/', profileController.updateProfile);
+
+/**
+ * @openapi
  * /api/profile/{userId}:
  *   get:
  *     tags: [Profile]

@@ -193,7 +193,8 @@ exports.verifyOTP = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
-        email_verified: true
+        email_verified: true,
+        profile_photo_url: user.profile_photo_url
       }
     });
   } catch (error) {
@@ -327,7 +328,8 @@ exports.login = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
-        email_verified: user.email_verified
+        email_verified: user.email_verified,
+        profile_photo_url: user.profile_photo_url
       }
     });
   } catch (error) {
@@ -659,7 +661,8 @@ exports.resetPassword = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
-        email_verified: user.email_verified
+        email_verified: user.email_verified,
+        profile_photo_url: user.profile_photo_url
       }
     });
   } catch (error) {
