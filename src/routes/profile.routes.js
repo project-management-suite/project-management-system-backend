@@ -103,6 +103,73 @@ router.put('/', profileController.updateProfile);
 
 /**
  * @openapi
+ * /api/profile/preferences:
+ *   get:
+ *     tags: [Profile]
+ *     summary: Get user notification preferences
+ *     responses:
+ *       200:
+ *         description: Preferences retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 preferences:
+ *                   type: object
+ *                   properties:
+ *                     user_id:
+ *                       type: string
+ *                     email_notifications:
+ *                       type: boolean
+ *                     task_assignments:
+ *                       type: boolean
+ *                     deadline_reminders:
+ *                       type: boolean
+ *                     status_updates:
+ *                       type: boolean
+ *                     weekly_digest:
+ *                       type: boolean
+ *                     milestone_updates:
+ *                       type: boolean
+ */
+router.get('/preferences', profileController.getNotificationPreferences);
+
+/**
+ * @openapi
+ * /api/profile/preferences:
+ *   put:
+ *     tags: [Profile]
+ *     summary: Update user notification preferences
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email_notifications:
+ *                 type: boolean
+ *               task_assignments:
+ *                 type: boolean
+ *               deadline_reminders:
+ *                 type: boolean
+ *               status_updates:
+ *                 type: boolean
+ *               weekly_digest:
+ *                 type: boolean
+ *               milestone_updates:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Preferences updated successfully
+ */
+router.put('/preferences', profileController.updateNotificationPreferences);
+
+/**
+ * @openapi
  * /api/profile/{userId}:
  *   get:
  *     tags: [Profile]

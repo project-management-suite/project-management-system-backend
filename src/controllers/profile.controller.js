@@ -143,6 +143,123 @@ exports.updateProfile = async (req, res) => {
 };
 
 /**
+ * Get user notification preferences
+ */
+exports.getNotificationPreferences = async (req, res) => {
+    try {
+        const userId = req.user.user_id;
+
+        const { data: preferences, error } = await supabase
+            .from('notification_preferences')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        // If no preferences exist, create default ones
+        if (!preferences) {
+            const { data: newPreferences, error: insertError } = await supabase
+                .from('notification_preferences')
+                .insert({
+                    user_id: userId,
+                    email_notifications: true,
+                    task_assignments: true,
+                    deadline_reminders: true,
+                    status_updates: true,
+                    weekly_digest: true,
+                    milestone_updates: true
+                })
+                .select()
+                .single();
+
+            if (insertError) throw insertError;
+
+            return res.json({
+                success: true,
+                preferences: newPreferences
+            });
+        }
+
+        res.json({
+            success: true,
+            preferences
+        });
+
+    } catch (error) {
+        console.error('Get notification preferences error:', error);
+        res.status(500).json({ error: 'Failed to retrieve notification preferences' });
+    }
+};
+
+/**
+ * Update user notification preferences
+ */
+exports.updateNotificationPreferences = async (req, res) => {
+    try {
+        const userId = req.user.user_id;
+        const {
+            email_notifications,
+            task_assignments,
+            deadline_reminders,
+            status_updates,
+            weekly_digest,
+            milestone_updates
+        } = req.body;
+
+        // Build update object with only provided fields
+        const updateData = {};
+        if (email_notifications !== undefined) updateData.email_notifications = email_notifications;
+        if (task_assignments !== undefined) updateData.task_assignments = task_assignments;
+        if (deadline_reminders !== undefined) updateData.deadline_reminders = deadline_reminders;
+        if (status_updates !== undefined) updateData.status_updates = status_updates;
+        if (weekly_digest !== undefined) updateData.weekly_digest = weekly_digest;
+        if (milestone_updates !== undefined) updateData.milestone_updates = milestone_updates;
+        updateData.updated_at = new Date().toISOString();
+
+        // Try to update first
+        const { data: preferences, error: updateError } = await supabase
+            .from('notification_preferences')
+            .update(updateData)
+            .eq('user_id', userId)
+            .select()
+            .maybeSingle();
+
+        // If no row was updated (doesn't exist), insert instead
+        if (!preferences) {
+            const { data: newPreferences, error: insertError } = await supabase
+                .from('notification_preferences')
+                .insert({
+                    user_id: userId,
+                    ...updateData
+                })
+                .select()
+                .single();
+
+            if (insertError) throw insertError;
+
+            return res.json({
+                success: true,
+                message: 'Notification preferences created successfully',
+                preferences: newPreferences
+            });
+        }
+
+        if (updateError) throw updateError;
+
+        res.json({
+            success: true,
+            message: 'Notification preferences updated successfully',
+            preferences
+        });
+
+    } catch (error) {
+        console.error('Update notification preferences error:', error);
+        res.status(500).json({ error: 'Failed to update notification preferences' });
+    }
+};
+
+/**
  * Upload profile photo
  */
 exports.uploadProfilePhoto = async (req, res) => {
