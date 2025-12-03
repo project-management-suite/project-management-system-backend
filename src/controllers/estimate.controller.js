@@ -24,6 +24,46 @@ class EstimateController {
 
             const estimate = await TaskEstimate.create(estimateData);
 
+            // If this is a task estimate (not subtask), update the task's estimated_hours
+            if (estimate.task_id && !estimate.subtask_id) {
+                const { supabase } = require('../config/supabase');
+                const { data: updatedTask, error: updateError } = await supabase
+                    .from('tasks')
+                    .update({
+                        estimated_hours: estimateData.estimated_hours,
+                        estimated_by: req.user.user_id,
+                        estimated_at: new Date().toISOString()
+                    })
+                    .eq('task_id', estimate.task_id)
+                    .select()
+                    .single();
+
+                if (updateError) {
+                    console.error('Error updating task estimate:', updateError);
+                } else {
+                    console.log('Task updated with estimate:', updatedTask);
+                }
+            }
+
+            // If this is a subtask estimate, update the subtask's estimated_hours
+            if (estimate.subtask_id) {
+                const { supabase } = require('../config/supabase');
+                const { data: updatedSubtask, error: updateError } = await supabase
+                    .from('subtasks')
+                    .update({
+                        estimated_hours: estimateData.estimated_hours
+                    })
+                    .eq('subtask_id', estimate.subtask_id)
+                    .select()
+                    .single();
+
+                if (updateError) {
+                    console.error('Error updating subtask estimate:', updateError);
+                } else {
+                    console.log('Subtask updated with estimate:', updatedSubtask);
+                }
+            }
+
             res.status(201).json({
                 success: true,
                 message: 'Estimate created successfully',
@@ -467,11 +507,11 @@ EstimateController.validationRules = {
             .isLength({ max: 1000 })
             .withMessage('Notes must not exceed 1000 characters'),
         body('task_id')
-            .optional()
+            .optional({ nullable: true, checkFalsy: true })
             .isUUID()
             .withMessage('Task ID must be a valid UUID'),
         body('subtask_id')
-            .optional()
+            .optional({ nullable: true, checkFalsy: true })
             .isUUID()
             .withMessage('Subtask ID must be a valid UUID'),
         // Custom validation: either task_id or subtask_id must be provided

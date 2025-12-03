@@ -122,6 +122,32 @@ router.get('/custom', reportController.getCustomReport);
 
 /**
  * @openapi
+ * /api/reports/manager-analytics:
+ *   get:
+ *     tags: [Reports]
+ *     summary: Get comprehensive manager analytics with KPIs
+ *     parameters:
+ *       - in: query
+ *         name: projectId
+ *         schema:
+ *           type: string
+ *         description: Filter by specific project (optional)
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           default: '30'
+ *         description: Time range in days (e.g., 7, 30, 90)
+ *     responses:
+ *       200:
+ *         description: Manager analytics retrieved successfully
+ *       403:
+ *         description: Access denied - Manager or Admin role required
+ */
+router.get('/manager-analytics', reportController.getManagerAnalytics);
+
+/**
+ * @openapi
  * /api/reports/analytics:
  *   get:
  *     tags: [Reports]

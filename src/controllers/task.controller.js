@@ -382,3 +382,168 @@ exports.bulkDeleteTasks = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete tasks in bulk', error: error.message });
   }
 };
+
+// Subtasks Management
+
+exports.getTaskSubtasks = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+
+    // Verify task exists
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const subtasks = await Task.getSubtasks(taskId);
+    res.json({ subtasks });
+  } catch (error) {
+    console.error('Get subtasks error:', error);
+    res.status(500).json({ message: 'Failed to fetch subtasks', error: error.message });
+  }
+};
+
+exports.createSubtask = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { title, description, estimated_hours, assignee_ids, priority, start_date, end_date } = req.body;
+
+    // Verify task exists
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const subtask = await Task.createSubtask({
+      parent_task_id: taskId,
+      title,
+      description,
+      estimated_hours,
+      priority: priority || 'MEDIUM',
+      start_date,
+      end_date,
+      created_by: req.user.user_id
+    });
+
+    // Assign developers if provided
+    if (assignee_ids && Array.isArray(assignee_ids) && assignee_ids.length > 0) {
+      await Task.assignSubtaskDevelopers(subtask.subtask_id, assignee_ids, req.user.user_id);
+    }
+
+    res.status(201).json(subtask);
+  } catch (error) {
+    console.error('Create subtask error:', error);
+    res.status(500).json({ message: 'Failed to create subtask', error: error.message });
+  }
+};
+
+// Work Logs Management
+
+exports.getTaskWorkLogs = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+
+    // Verify task exists
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const workLogs = await Task.getWorkLogs(taskId);
+    res.json({ workLogs });
+  } catch (error) {
+    console.error('Get work logs error:', error);
+    res.status(500).json({ message: 'Failed to fetch work logs', error: error.message });
+  }
+};
+
+exports.createWorkLog = async (req, res) => {
+  try {
+    const { task_id, subtask_id, hours_logged, work_date, description, log_type } = req.body;
+
+    // Verify either task or subtask exists
+    if (task_id) {
+      const task = await Task.findById(task_id);
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+    }
+
+    if (subtask_id) {
+      const subtask = await Task.findSubtaskById(subtask_id);
+      if (!subtask) {
+        return res.status(404).json({ message: 'Subtask not found' });
+      }
+    }
+
+    const workLog = await Task.createWorkLog({
+      task_id,
+      subtask_id,
+      user_id: req.user.user_id,
+      hours_logged,
+      work_date: work_date || new Date().toISOString().split('T')[0],
+      description,
+      log_type: log_type || 'DEVELOPMENT'
+    });
+
+    res.status(201).json(workLog);
+  } catch (error) {
+    console.error('Create work log error:', error);
+    res.status(500).json({ message: 'Failed to create work log', error: error.message });
+  }
+};
+
+// Task Estimates Management
+
+exports.getTaskEstimates = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+
+    // Verify task exists
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const estimates = await Task.getEstimates(taskId);
+    res.json({ estimates });
+  } catch (error) {
+    console.error('Get estimates error:', error);
+    res.status(500).json({ message: 'Failed to fetch estimates', error: error.message });
+  }
+};
+
+exports.createTaskEstimate = async (req, res) => {
+  try {
+    const { task_id, subtask_id, estimated_hours, estimate_type, notes } = req.body;
+
+    // Verify either task or subtask exists
+    if (task_id) {
+      const task = await Task.findById(task_id);
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+    }
+
+    if (subtask_id) {
+      const subtask = await Task.findSubtaskById(subtask_id);
+      if (!subtask) {
+        return res.status(404).json({ message: 'Subtask not found' });
+      }
+    }
+
+    const estimate = await Task.createEstimate({
+      task_id,
+      subtask_id,
+      estimated_hours,
+      estimator_id: req.user.user_id,
+      estimate_type: estimate_type || 'INITIAL',
+      notes
+    });
+
+    res.status(201).json(estimate);
+  } catch (error) {
+    console.error('Create estimate error:', error);
+    res.status(500).json({ message: 'Failed to create estimate', error: error.message });
+  }
+};

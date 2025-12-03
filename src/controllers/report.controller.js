@@ -442,6 +442,114 @@ exports.getCustomReport = async (req, res) => {
 };
 
 /**
+ * Get comprehensive manager analytics with KPIs
+ */
+exports.getManagerAnalytics = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const userRole = req.user.role;
+    const { projectId, timeRange = '30' } = req.query; // timeRange in days
+
+    // Only managers and admins can access
+    if (userRole !== 'MANAGER' && userRole !== 'ADMIN') {
+      return res.status(403).json({ error: 'Access denied. Manager or Admin role required.' });
+    }
+
+    // Calculate date ranges
+    const now = new Date();
+    const daysAgo = parseInt(timeRange);
+    const startDate = new Date(now.getTime() - (daysAgo * 24 * 60 * 60 * 1000));
+
+    // Get manager's projects
+    let projectQuery = supabase.from('projects').select('project_id, project_name, created_at, start_date, end_date');
+
+    if (userRole === 'MANAGER') {
+      projectQuery = projectQuery.eq('owner_manager_id', userId);
+    }
+
+    if (projectId) {
+      projectQuery = projectQuery.eq('project_id', projectId);
+    }
+
+    const { data: projects, error: projectsError } = await projectQuery;
+    if (projectsError) throw projectsError;
+
+    const projectIds = projects?.map(p => p.project_id) || [];
+
+    if (projectIds.length === 0) {
+      return res.json({
+        success: true,
+        analytics: {
+          overview: {},
+          velocity: {},
+          teamPerformance: {},
+          projectHealth: {},
+          trends: {}
+        }
+      });
+    }
+
+    // Get all tasks for these projects
+    const { data: tasks } = await supabase
+      .from('tasks')
+      .select('*')
+      .in('project_id', projectIds);
+
+    // Get subtasks
+    const taskIds = tasks?.map(t => t.task_id) || [];
+    const { data: subtasks } = await supabase
+      .from('subtasks')
+      .select('*')
+      .in('parent_task_id', taskIds);
+
+    const subtaskIds = subtasks?.map(s => s.subtask_id) || [];
+
+    // Get work logs with aggregation (both task-level and subtask-level)
+    let workLogsQuery = supabase
+      .from('work_logs')
+      .select('*,  profiles!work_logs_user_id_fkey(user_id, username)')
+      .gte('work_date', startDate.toISOString().split('T')[0]);
+
+    // Build OR condition for task_id and subtask_id
+    if (taskIds.length > 0 && subtaskIds.length > 0) {
+      workLogsQuery = workLogsQuery.or(`task_id.in.(${taskIds.join(',')}),subtask_id.in.(${subtaskIds.join(',')})`);
+    } else if (taskIds.length > 0) {
+      workLogsQuery = workLogsQuery.in('task_id', taskIds);
+    } else if (subtaskIds.length > 0) {
+      workLogsQuery = workLogsQuery.in('subtask_id', subtaskIds);
+    }
+
+    const { data: workLogs } = await workLogsQuery;
+
+    // Get task estimates
+    const { data: estimates } = await supabase
+      .from('task_estimates')
+      .select('*')
+      .in('task_id', taskIds);
+
+    // Get team members
+    const { data: taskAssignments } = await supabase
+      .from('task_assignments')
+      .select('*, profiles!task_assignments_developer_id_fkey(user_id, username, email)')
+      .in('task_id', taskIds);
+
+    // Calculate KPIs
+    const kpis = calculateManagerKPIs(tasks, subtasks, workLogs, estimates, taskAssignments, projects, startDate, now);
+
+    res.json({
+      success: true,
+      analytics: kpis,
+      generatedAt: new Date().toISOString(),
+      timeRange: `${daysAgo} days`
+    });
+
+  } catch (error) {
+    console.error('Manager analytics error:', error);
+    res.status(500).json({ error: 'Failed to generate manager analytics' });
+  }
+};
+
+/**
  * Get dashboard analytics overview
  */
 exports.getDashboardAnalytics = async (req, res) => {
@@ -1070,3 +1178,204 @@ async function generateCustomReportData(startDate, endDate, projectId, user) {
     teamStats: Object.values(developerStats)
   };
 }
+
+/**
+ * Calculate comprehensive manager KPIs
+ */
+const calculateManagerKPIs = (tasks, subtasks, workLogs, estimates, taskAssignments, projects, startDate, endDate) => {
+  // Overview metrics
+  const totalTasks = tasks?.length || 0;
+  const completedTasks = tasks?.filter(t => t.status === 'COMPLETED').length || 0;
+  const inProgressTasks = tasks?.filter(t => t.status === 'IN_PROGRESS').length || 0;
+  const todoTasks = tasks?.filter(t => t.status === 'TODO').length || 0;
+  const completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : 0;
+
+  // Calculate velocity (tasks completed per week)
+  const dateRangeDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+  const weeks = Math.max(1, Math.ceil(dateRangeDays / 7));
+  const velocity = (completedTasks / weeks).toFixed(2);
+
+  // Calculate estimation accuracy
+  const tasksWithEstimates = tasks?.filter(t => t.estimated_hours && t.actual_hours) || [];
+  let totalEstimated = 0, totalActual = 0, accuracyCount = 0;
+
+  tasksWithEstimates.forEach(task => {
+    totalEstimated += parseFloat(task.estimated_hours) || 0;
+    totalActual += parseFloat(task.actual_hours) || 0;
+    accuracyCount++;
+  });
+
+  const estimationAccuracy = accuracyCount > 0
+    ? (100 - Math.abs((totalEstimated - totalActual) / totalEstimated * 100)).toFixed(1)
+    : 0;
+
+  // Calculate burn rate (hours consumed vs estimated)
+  const totalWorkHours = workLogs?.reduce((sum, log) => sum + (parseFloat(log.hours_logged) || 0), 0) || 0;
+  const totalEstimatedHours = tasks?.reduce((sum, t) => sum + (parseFloat(t.estimated_hours) || 0), 0) || 0;
+  const burnRate = totalEstimatedHours > 0 ? ((totalWorkHours / totalEstimatedHours) * 100).toFixed(1) : 0;
+
+  // Team performance by developer
+  const teamStats = {};
+  workLogs?.forEach(log => {
+    const devId = log.user_id;
+    const devName = log.profiles?.username || 'Unknown';
+
+    if (!teamStats[devId]) {
+      teamStats[devId] = {
+        userId: devId,
+        username: devName,
+        tasksCompleted: 0,
+        hoursLogged: 0,
+        avgHoursPerTask: 0,
+        workLogCount: 0,
+        efficiency: 0
+      };
+    }
+
+    teamStats[devId].hoursLogged += parseFloat(log.hours_logged) || 0;
+    teamStats[devId].workLogCount++;
+  });
+
+  // Add completed tasks count per developer
+  taskAssignments?.forEach(assignment => {
+    const task = tasks?.find(t => t.task_id === assignment.task_id);
+    const devId = assignment.developer_id;
+
+    if (task && task.status === 'COMPLETED' && teamStats[devId]) {
+      teamStats[devId].tasksCompleted++;
+    }
+  });
+
+  // Calculate efficiency (tasks completed per 10 hours)
+  Object.values(teamStats).forEach(stat => {
+    if (stat.tasksCompleted > 0) {
+      stat.avgHoursPerTask = (stat.hoursLogged / stat.tasksCompleted).toFixed(1);
+      stat.efficiency = ((stat.tasksCompleted / stat.hoursLogged) * 10).toFixed(2); // Tasks per 10 hours
+    }
+  });
+
+  const teamPerformance = Object.values(teamStats).sort((a, b) => b.efficiency - a.efficiency);
+
+  // Task distribution by priority
+  const priorityDistribution = {
+    HIGH: tasks?.filter(t => t.priority === 'HIGH').length || 0,
+    MEDIUM: tasks?.filter(t => t.priority === 'MEDIUM').length || 0,
+    LOW: tasks?.filter(t => t.priority === 'LOW').length || 0
+  };
+
+  // Task distribution by status
+  const statusDistribution = {
+    TODO: todoTasks,
+    IN_PROGRESS: inProgressTasks,
+    COMPLETED: completedTasks,
+    CANCELLED: tasks?.filter(t => t.status === 'CANCELLED').length || 0
+  };
+
+  // Project health scores
+  const projectHealth = projects?.map(project => {
+    const projectTasks = tasks?.filter(t => t.project_id === project.project_id) || [];
+    const projectCompleted = projectTasks.filter(t => t.status === 'COMPLETED').length;
+    const projectTotal = projectTasks.length;
+    const projectCompletionRate = projectTotal > 0 ? ((projectCompleted / projectTotal) * 100).toFixed(1) : 0;
+
+    const projectEstimated = projectTasks.reduce((sum, t) => sum + (parseFloat(t.estimated_hours) || 0), 0);
+    const projectActual = projectTasks.reduce((sum, t) => sum + (parseFloat(t.actual_hours) || 0), 0);
+    const projectBurnRate = projectEstimated > 0 ? ((projectActual / projectEstimated) * 100).toFixed(1) : 0;
+
+    // Health score (0-100) based on completion rate and burn rate
+    let healthScore = 0;
+    if (projectTotal > 0) {
+      const completionScore = parseFloat(projectCompletionRate);
+      const burnScore = projectBurnRate <= 100 ? (100 - Math.abs(100 - projectBurnRate)) : 50;
+      healthScore = ((completionScore * 0.6) + (burnScore * 0.4)).toFixed(1);
+    }
+
+    return {
+      projectId: project.project_id,
+      projectName: project.project_name,
+      totalTasks: projectTotal,
+      completedTasks: projectCompleted,
+      completionRate: projectCompletionRate,
+      burnRate: projectBurnRate,
+      healthScore: healthScore,
+      status: healthScore >= 70 ? 'GOOD' : healthScore >= 40 ? 'WARNING' : 'CRITICAL'
+    };
+  }) || [];
+
+  // Velocity trend (weekly breakdown)
+  const velocityTrend = calculateVelocityTrend(tasks, startDate, endDate);
+
+  // Work log trends by type
+  const workLogTypes = {};
+  workLogs?.forEach(log => {
+    const type = log.work_type || 'DEVELOPMENT';
+    workLogTypes[type] = (workLogTypes[type] || 0) + parseFloat(log.hours_logged);
+  });
+
+  return {
+    overview: {
+      totalProjects: projects?.length || 0,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      todoTasks,
+      completionRate: parseFloat(completionRate),
+      totalTeamMembers: Object.keys(teamStats).length
+    },
+    velocity: {
+      tasksPerWeek: parseFloat(velocity),
+      totalWeeks: weeks,
+      trend: velocityTrend
+    },
+    estimation: {
+      accuracy: parseFloat(estimationAccuracy),
+      totalEstimatedHours: totalEstimatedHours.toFixed(1),
+      totalActualHours: totalActual.toFixed(1),
+      variance: (totalActual - totalEstimated).toFixed(1),
+      tasksWithEstimates: accuracyCount
+    },
+    burnRate: {
+      percentage: parseFloat(burnRate),
+      hoursConsumed: totalWorkHours.toFixed(1),
+      hoursEstimated: totalEstimatedHours.toFixed(1),
+      hoursRemaining: Math.max(0, totalEstimatedHours - totalWorkHours).toFixed(1)
+    },
+    teamPerformance,
+    distribution: {
+      byPriority: priorityDistribution,
+      byStatus: statusDistribution,
+      byWorkType: workLogTypes
+    },
+    projectHealth,
+    timeRange: {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      days: dateRangeDays
+    }
+  };
+};
+
+/**
+ * Calculate velocity trend over time
+ */
+const calculateVelocityTrend = (tasks, startDate, endDate) => {
+  const completedTasks = tasks?.filter(t => t.status === 'COMPLETED' && t.updated_at) || [];
+
+  // Group by week
+  const weeklyData = {};
+  completedTasks.forEach(task => {
+    const completionDate = new Date(task.updated_at);
+    if (completionDate >= startDate && completionDate <= endDate) {
+      const weekStart = new Date(completionDate);
+      weekStart.setDate(completionDate.getDate() - completionDate.getDay()); // Start of week
+      const weekKey = weekStart.toISOString().split('T')[0];
+
+      weeklyData[weekKey] = (weeklyData[weekKey] || 0) + 1;
+    }
+  });
+
+  // Convert to array and sort
+  return Object.entries(weeklyData)
+    .map(([week, count]) => ({ week, tasksCompleted: count }))
+    .sort((a, b) => new Date(a.week) - new Date(b.week));
+};

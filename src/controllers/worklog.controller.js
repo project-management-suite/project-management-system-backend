@@ -395,11 +395,11 @@ WorkLogController.validationRules = {
             .isIn(['DEVELOPMENT', 'TESTING', 'REVIEW', 'DOCUMENTATION', 'MEETING', 'RESEARCH', 'BUG_FIX', 'OTHER'])
             .withMessage('Log type must be a valid type'),
         body('task_id')
-            .optional()
+            .optional({ nullable: true, checkFalsy: true })
             .isUUID()
             .withMessage('Task ID must be a valid UUID'),
         body('subtask_id')
-            .optional()
+            .optional({ nullable: true, checkFalsy: true })
             .isUUID()
             .withMessage('Subtask ID must be a valid UUID')
     ],
@@ -435,11 +435,11 @@ WorkLogController.validationRules = {
             .isDate()
             .withMessage('Work date must be a valid date'),
         body('workLogs.*.task_id')
-            .optional()
+            .optional({ nullable: true, checkFalsy: true })
             .isUUID()
             .withMessage('Task ID must be a valid UUID'),
         body('workLogs.*.subtask_id')
-            .optional()
+            .optional({ nullable: true, checkFalsy: true })
             .isUUID()
             .withMessage('Subtask ID must be a valid UUID')
     ]

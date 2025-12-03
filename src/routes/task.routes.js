@@ -12,7 +12,13 @@ const {
     unassignDeveloper,
     bulkCreateTasks,
     bulkUpdateTasks,
-    bulkDeleteTasks
+    bulkDeleteTasks,
+    getTaskSubtasks,
+    createSubtask,
+    getTaskWorkLogs,
+    createWorkLog,
+    getTaskEstimates,
+    createTaskEstimate
 } = require('../controllers/task.controller');
 
 router.use(authenticate);
@@ -400,5 +406,135 @@ router.put('/bulk/update', bulkUpdateTasks);
  *         description: Permission denied
  */
 router.delete('/bulk/delete', bulkDeleteTasks);
+
+// Subtasks Routes
+
+/**
+ * @openapi
+ * /api/tasks/{taskId}/subtasks:
+ *   get:
+ *     tags: [Tasks - Subtasks]
+ *     summary: Get all subtasks for a task
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: List of subtasks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 subtasks:
+ *                   type: array
+ *       404:
+ *         description: Task not found
+ */
+router.get('/:taskId/subtasks', getTaskSubtasks);
+
+/**
+ * @openapi
+ * /api/tasks/{taskId}/subtasks:
+ *   post:
+ *     tags: [Tasks - Subtasks]
+ *     summary: Create a subtask for a task (all authenticated users)
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               estimated_hours:
+ *                 type: number
+ *               assignee_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               priority:
+ *                 type: string
+ *                 enum: [LOW, MEDIUM, HIGH, CRITICAL, URGENT]
+ *               start_date:
+ *                 type: string
+ *                 format: date
+ *               end_date:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       201:
+ *         description: Subtask created
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: Task not found
+ */
+router.post('/:taskId/subtasks', createSubtask);
+
+/**
+ * @openapi
+ * /api/tasks/{taskId}/work-logs:
+ *   get:
+ *     tags: [Tasks - Work Logs]
+ *     summary: Get all work logs for a task
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: List of work logs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 workLogs:
+ *                   type: array
+ *       404:
+ *         description: Task not found
+ */
+router.get('/:taskId/work-logs', getTaskWorkLogs);
+
+/**
+ * @openapi
+ * /api/tasks/{taskId}/estimates:
+ *   get:
+ *     tags: [Tasks - Estimates]
+ *     summary: Get estimate history for a task
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: List of estimates
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 estimates:
+ *                   type: array
+ *       404:
+ *         description: Task not found
+ */
+router.get('/:taskId/estimates', getTaskEstimates);
 
 module.exports = router;
