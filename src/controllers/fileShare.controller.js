@@ -26,7 +26,7 @@ exports.shareFile = async (req, res) => {
             });
         }
 
-        if (!fileAccess.hasAccess || (fileAccess.permission !== 'admin' && fileAccess.permission !== 'write')) {
+        if (!fileAccess.hasAccess) {
             return res.status(403).json({
                 error: 'You do not have permission to share this file'
             });
@@ -36,7 +36,7 @@ exports.shareFile = async (req, res) => {
             file_id,
             shared_with_user_id,
             shared_by_user_id: req.user.user_id,
-            permission_level
+            permission_level: 'read'  // Use read permission for download access
         });
 
         // Create notification for the user receiving the file
@@ -86,7 +86,7 @@ exports.shareBulkFiles = async (req, res) => {
         // Check permissions for all files
         for (const file_id of file_ids) {
             const fileAccess = await FileShare.checkFileAccess(file_id, req.user.user_id);
-            if (!fileAccess.hasAccess || (fileAccess.permission !== 'admin' && fileAccess.permission !== 'write')) {
+            if (!fileAccess.hasAccess) {
                 return res.status(403).json({
                     error: `You do not have permission to share file ${file_id}`
                 });
@@ -97,7 +97,7 @@ exports.shareBulkFiles = async (req, res) => {
             file_ids,
             user_ids,
             shared_by_user_id: req.user.user_id,
-            permission_level
+            permission_level: 'read'  // Use read permission for download access
         });
 
         // Create notifications for all users
@@ -339,11 +339,11 @@ exports.removeShare = async (req, res) => {
 exports.shareWithProjectTeam = async (req, res) => {
     try {
         const { fileId } = req.params;
-        const { permission_level = 'read' } = req.body;
+        const { project_id } = req.body;
 
         // Check if user has permission to share the file
         const fileAccess = await FileShare.checkFileAccess(fileId, req.user.user_id);
-        if (!fileAccess.hasAccess || (fileAccess.permission !== 'admin' && fileAccess.permission !== 'write')) {
+        if (!fileAccess.hasAccess) {
             return res.status(403).json({
                 error: 'You do not have permission to share this file'
             });
@@ -352,7 +352,8 @@ exports.shareWithProjectTeam = async (req, res) => {
         const result = await FileShare.shareWithProjectTeam(
             fileId,
             req.user.user_id,
-            permission_level
+            'read',      // Use read permission for download access
+            project_id   // Optional specific project
         );
 
         res.status(201).json({

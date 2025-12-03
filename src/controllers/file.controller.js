@@ -27,6 +27,9 @@ const upload = multer({
 // Middleware for handling file uploads
 exports.uploadMiddleware = upload.array('files', 10);
 
+// Middleware for handling single standalone file uploads
+exports.uploadStandaloneMiddleware = upload.single('file');
+
 /**
  * Upload files to a project
  */
@@ -57,16 +60,26 @@ exports.uploadProjectFiles = async (req, res) => {
 
     if (!isManager && !isAdmin) {
       // Check if developer is assigned to the project
-      const { data: assignment } = await supabase
-        .from('task_assignments')
-        .select('assignment_id')
-        .eq('developer_id', userId)
-        .in('task_id',
-          supabase.from('tasks').select('task_id').eq('project_id', project_id)
-        )
-        .limit(1);
+      // First get the task IDs for this project
+      const { data: projectTasks } = await supabase
+        .from('tasks')
+        .select('task_id')
+        .eq('project_id', project_id);
 
-      if (!assignment || assignment.length === 0) {
+      const taskIds = projectTasks ? projectTasks.map(task => task.task_id) : [];
+
+      if (taskIds.length > 0) {
+        const { data: assignment } = await supabase
+          .from('task_assignments')
+          .select('assignment_id')
+          .eq('developer_id', userId)
+          .in('task_id', taskIds)
+          .limit(1);
+
+        if (!assignment || assignment.length === 0) {
+          return res.status(403).json({ error: 'Access denied to this project' });
+        }
+      } else {
         return res.status(403).json({ error: 'Access denied to this project' });
       }
     }
@@ -151,6 +164,109 @@ exports.uploadProjectFiles = async (req, res) => {
   } catch (error) {
     console.error('Upload project files error:', error);
     res.status(500).json({ error: 'Failed to upload files' });
+  }
+};
+
+/**
+ * Upload a standalone file for sharing (not tied to a project)
+ */
+exports.uploadStandaloneFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    const userId = req.user.user_id;
+    const file = req.file; // Single file upload
+
+    try {
+      // Generate unique filename
+      const uniqueSuffix = Date.now() + '_' + crypto.randomUUID().slice(0, 8);
+      const sanitizedOriginalName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const fileExtension = sanitizedOriginalName.split('.').pop();
+      const fileNameWithoutExt = sanitizedOriginalName.replace(/\.[^/.]+$/, "");
+      const fileName = `${fileNameWithoutExt}_${uniqueSuffix}.${fileExtension}`;
+
+      const filePath = `shared-files/${userId}/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('uploads')
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('uploads')
+        .getPublicUrl(filePath);
+
+      // Save file metadata to database (without project_id or task_id)
+      const fileRecord = await File.create({
+        project_id: null,
+        task_id: null,
+        uploaded_by_user_id: userId,
+        file_name: file.originalname,
+        file_path_in_storage: filePath,
+        file_size: file.size,
+        mime_type: file.mimetype
+      });
+
+      res.json({
+        success: true,
+        message: 'File uploaded successfully',
+        file: {
+          file_id: fileRecord.file_id,
+          file_name: file.originalname,
+          original_name: file.originalname,
+          file_url: urlData.publicUrl,
+          download_url: urlData.publicUrl,
+          file_size: file.size,
+          mime_type: file.mimetype,
+          upload_date: fileRecord.upload_date
+        }
+      });
+
+    } catch (fileError) {
+      throw new Error(`Failed to process file: ${fileError.message}`);
+    }
+
+  } catch (error) {
+    console.error('Upload standalone file error:', error);
+    res.status(500).json({ error: error.message || 'Failed to upload file' });
+  }
+};
+
+/**
+ * Get user's own standalone files
+ */
+exports.getUserStandaloneFiles = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+
+    // Get files uploaded by user where project_id is NULL (standalone files)
+    const files = await File.findByUploader(userId, true); // true for standalone only
+
+    // Add download URLs
+    const filesWithUrls = files.map(file => ({
+      ...file,
+      download_url: supabase.storage.from('uploads').getPublicUrl(file.file_path_in_storage).data.publicUrl,
+      original_name: file.file_name
+    }));
+
+    res.json({
+      success: true,
+      files: filesWithUrls
+    });
+
+  } catch (error) {
+    console.error('Get user standalone files error:', error);
+    res.status(500).json({ error: 'Failed to retrieve files' });
   }
 };
 
@@ -321,12 +437,26 @@ exports.getAllFiles = async (req, res) => {
       }
     } else {
       // Developers see files from projects they're assigned to
-      const { data: developerProjects, error: devError } = await supabase
-        .from('tasks')
-        .select('project_id')
-        .in('task_id',
-          supabase.from('task_assignments').select('task_id').eq('developer_id', userId)
-        );
+      // First get the task IDs assigned to this developer
+      const { data: assignedTasks, error: taskError } = await supabase
+        .from('task_assignments')
+        .select('task_id')
+        .eq('developer_id', userId);
+
+      if (taskError) throw taskError;
+
+      const taskIds = assignedTasks ? assignedTasks.map(assignment => assignment.task_id) : [];
+
+      let developerProjects = [];
+      if (taskIds.length > 0) {
+        const { data: projects, error: devError } = await supabase
+          .from('tasks')
+          .select('project_id')
+          .in('task_id', taskIds);
+
+        if (devError) throw devError;
+        developerProjects = projects || [];
+      }
 
       if (devError) throw devError;
 
@@ -375,8 +505,23 @@ exports.getFileById = async (req, res) => {
     const isAdmin = req.user.role === 'ADMIN';
     const isOwner = file.uploaded_by_user_id === userId;
 
-    if (!isAdmin && !isOwner) {
-      // Check project access
+    // Check if file is shared with this user
+    const { data: fileShare } = await supabase
+      .from('file_shares')
+      .select('share_id')
+      .eq('file_id', file_id)
+      .eq('shared_with_user_id', userId)
+      .limit(1);
+
+    const isSharedWithUser = fileShare && fileShare.length > 0;
+
+    if (!isAdmin && !isOwner && !isSharedWithUser) {
+      // If it's a standalone file (no project_id), only owner, admin, or users it's shared with can access
+      if (!file.project_id) {
+        return res.status(403).json({ error: 'Access denied to this file' });
+      }
+
+      // Check project access for project files
       const { data: project } = await supabase
         .from('projects')
         .select('owner_manager_id')
@@ -386,16 +531,26 @@ exports.getFileById = async (req, res) => {
       const isManager = project?.owner_manager_id === userId;
 
       if (!isManager) {
-        const { data: assignment } = await supabase
-          .from('task_assignments')
-          .select('assignment_id')
-          .eq('developer_id', userId)
-          .in('task_id',
-            supabase.from('tasks').select('task_id').eq('project_id', file.project_id)
-          )
-          .limit(1);
+        // First get the task IDs for this project
+        const { data: projectTasks } = await supabase
+          .from('tasks')
+          .select('task_id')
+          .eq('project_id', file.project_id);
 
-        if (!assignment || assignment.length === 0) {
+        const taskIds = projectTasks ? projectTasks.map(task => task.task_id) : [];
+
+        if (taskIds.length > 0) {
+          const { data: assignment } = await supabase
+            .from('task_assignments')
+            .select('assignment_id')
+            .eq('developer_id', userId)
+            .in('task_id', taskIds)
+            .limit(1);
+
+          if (!assignment || assignment.length === 0) {
+            return res.status(403).json({ error: 'Access denied to this file' });
+          }
+        } else {
           return res.status(403).json({ error: 'Access denied to this file' });
         }
       }

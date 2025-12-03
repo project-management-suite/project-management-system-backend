@@ -41,6 +41,56 @@ router.get('/', fileController.getAllFiles);
 
 /**
  * @openapi
+ * /api/files/upload-standalone:
+ *   post:
+ *     tags: [Files]
+ *     summary: Upload a standalone file for sharing
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               uploaded_by_user_id:
+ *                 type: string
+ *                 description: ID of the user uploading the file
+ *     responses:
+ *       200:
+ *         description: File uploaded successfully
+ *       400:
+ *         description: No file provided or invalid input
+ *       403:
+ *         description: Access denied
+ */
+router.post('/upload-standalone', fileController.uploadStandaloneMiddleware, fileController.uploadStandaloneFile);
+
+/**
+ * @openapi
+ * /api/files/my-standalone:
+ *   get:
+ *     tags: [Files]
+ *     summary: Get user's own standalone files
+ *     responses:
+ *       200:
+ *         description: User's standalone files
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 files:
+ *                   type: array
+ *                   items: { $ref: '#/components/schemas/FileMeta' }
+ */
+router.get('/my-standalone', fileController.getUserStandaloneFiles);
+
+/**
+ * @openapi
  * /api/files/project/{projectId}/upload:
  *   post:
  *     tags: [Files]

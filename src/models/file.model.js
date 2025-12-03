@@ -85,6 +85,30 @@ class File {
     return new File(data);
   }
 
+  static async findByUploader(userId, standaloneOnly = false) {
+    let query = supabase
+      .from('files')
+      .select(`
+        *,
+        uploader:profiles!files_uploaded_by_user_id_fkey(username, email)
+      `)
+      .eq('uploaded_by_user_id', userId);
+
+    if (standaloneOnly) {
+      query = query.is('project_id', null);
+    }
+
+    const { data, error } = await query
+      .order('upload_date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching files by uploader:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
   static async delete(file_id) {
     const { error } = await supabase
       .from('files')

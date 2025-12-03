@@ -362,37 +362,51 @@ class FileShare {
     /**
      * Share file with project team
      */
-    static async shareWithProjectTeam(fileId, sharedByUserId, permissionLevel = 'read') {
-        // Get project team members
-        const { data: fileData, error: fileError } = await supabase
-            .from('files')
-            .select(`
-        project_id,
-        projects(
-          owner_manager_id,
-          task_assignments(developer_id)
-        )
-      `)
-            .eq('file_id', fileId)
-            .single();
+    static async shareWithProjectTeam(fileId, sharedByUserId, permissionLevel = 'read', projectId = null) {
+        let targetProjectId = projectId;
 
-        if (fileError) throw fileError;
-        if (!fileData.project_id) {
-            throw new Error('File is not associated with a project');
+        // If no specific project ID is provided, get the file's project
+        if (!targetProjectId) {
+            const { data: fileData, error: fileError } = await supabase
+                .from('files')
+                .select('project_id')
+                .eq('file_id', fileId)
+                .single();
+
+            if (fileError) throw fileError;
+            targetProjectId = fileData.project_id;
         }
+
+        if (!targetProjectId) {
+            throw new Error('File is not associated with a project and no project specified');
+        }
+
+        // Get project team members from project_members table
+        const { data: teamMembers, error: teamError } = await supabase
+            .from('project_members')
+            .select(`
+                member_id,
+                project:projects!inner(
+                    project_id,
+                    owner_manager_id
+                )
+            `)
+            .eq('project_id', targetProjectId);
+
+        if (teamError) throw teamError;
 
         // Collect unique team member IDs
         const teamMemberIds = new Set();
 
-        // Add project owner
-        if (fileData.projects.owner_manager_id) {
-            teamMemberIds.add(fileData.projects.owner_manager_id);
+        // Add project owner if available
+        if (teamMembers.length > 0 && teamMembers[0].project.owner_manager_id) {
+            teamMemberIds.add(teamMembers[0].project.owner_manager_id);
         }
 
-        // Add all developers assigned to project tasks
-        fileData.projects.task_assignments.forEach(assignment => {
-            if (assignment.developer_id) {
-                teamMemberIds.add(assignment.developer_id);
+        // Add all project members
+        teamMembers.forEach(member => {
+            if (member.member_id) {
+                teamMemberIds.add(member.member_id);
             }
         });
 
